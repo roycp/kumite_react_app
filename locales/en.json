@@ -1,0 +1,92 @@
+{
+  "app": {
+    "title": "KumiteApp",
+    "loading": "Loading..."
+  },
+  "main": {
+    "subtitle": "Martial Arts Tournament Management",
+    "syncup": "Profile & Registration",
+    "search": "Search Tournaments",
+    "management": "My Tournaments"
+  },
+  "syncup": {
+    "title": "Set Up Profile",
+    "question": "Are you an Athlete or a Coach?",
+    "athlete": "Athlete",
+    "coach": "Coach",
+    "fullName": "Full Name",
+    "email": "Email",
+    "country": "Country",
+    "age": "Age",
+    "gender": "Gender",
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "genderOther": "Other",
+    "academy": "Academy",
+    "weight": "Weight (kg)",
+    "beltGrade": "Belt Grade",
+    "white": "White",
+    "blue": "Blue",
+    "purple": "Purple",
+    "brown": "Brown",
+    "black": "Black",
+    "addAthlete": "Add Athlete",
+    "athleteNumber": "Athlete #{{num}}",
+    "save": "Save Profile",
+    "saved": "Profile saved successfully!",
+    "coachInfo": "Coach Information",
+    "athletesSection": "Athletes to Register"
+  },
+  "search": {
+    "title": "Search Tournaments",
+    "subtitle": "Select a tournament to view details",
+    "date": "Date",
+    "location": "Location",
+    "viewDetails": "View Details"
+  },
+  "detail": {
+    "title": "Tournament Detail",
+    "date": "Date",
+    "location": "Location",
+    "description": "Description",
+    "descriptionText": "Official martial arts tournament. Categories for all ages and levels.",
+    "syncup": "Sign Up",
+    "back": "Back"
+  },
+  "form": {
+    "title": "Registration Form",
+    "subtitle": "Athlete Registration",
+    "athleteInfo": "ATHLETE INFORMATION",
+    "inscriptionDetails": "REGISTRATION DETAILS",
+    "eventCoach": "EVENT & COACH",
+    "fullName": "Full Name",
+    "email": "Email",
+    "country": "Country",
+    "age": "Age",
+    "gender": "Gender",
+    "academy": "Academy",
+    "weight": "Weight (kg)",
+    "athleteGrade": "Athlete Grade / Belt",
+    "categoryType": "Category Type",
+    "eventName": "Event Name",
+    "coachName": "Coach Full Name",
+    "reset": "Reset",
+    "register": "Register",
+    "success": "✓ Athlete registered successfully!",
+    "required": "Required",
+    "invalidEmail": "Enter a valid email",
+    "invalidAge": "Enter a valid age",
+    "invalidWeight": "Enter a valid weight (kg)",
+    "selectGender": "-- Select Gender --",
+    "selectGrade": "-- Select Grade --",
+    "selectCategory": "-- Select Category --"
+  },
+  "management": {
+    "title": "My Tournaments",
+    "subtitle": "Registered tournaments",
+    "empty": "No registered tournaments yet.",
+    "emptyHint": "Search for a tournament and sign up to see it here.",
+    "athlete": "Athlete",
+    "registered": "Registered on"
+  }
+}

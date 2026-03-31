@@ -1,0 +1,92 @@
+{
+  "app": {
+    "title": "KumiteApp",
+    "loading": "Cargando..."
+  },
+  "main": {
+    "subtitle": "Gestión de Torneos de Artes Marciales",
+    "syncup": "Perfil & Registro",
+    "search": "Buscar Torneos",
+    "management": "Mis Torneos"
+  },
+  "syncup": {
+    "title": "Configurar Perfil",
+    "question": "¿Eres Atleta o Entrenador?",
+    "athlete": "Atleta",
+    "coach": "Entrenador",
+    "fullName": "Nombre Completo",
+    "email": "Correo Electrónico",
+    "country": "País",
+    "age": "Edad",
+    "gender": "Género",
+    "genderMale": "Masculino",
+    "genderFemale": "Femenino",
+    "genderOther": "Otro",
+    "academy": "Academia",
+    "weight": "Peso (kg)",
+    "beltGrade": "Grado / Cinturón",
+    "white": "Blanco",
+    "blue": "Azul",
+    "purple": "Morado",
+    "brown": "Café",
+    "black": "Negro",
+    "addAthlete": "Agregar Atleta",
+    "athleteNumber": "Atleta #{{num}}",
+    "save": "Guardar Perfil",
+    "saved": "¡Perfil guardado exitosamente!",
+    "coachInfo": "Información del Entrenador",
+    "athletesSection": "Atletas a Registrar"
+  },
+  "search": {
+    "title": "Buscar Torneos",
+    "subtitle": "Selecciona un torneo para ver detalles",
+    "date": "Fecha",
+    "location": "Lugar",
+    "viewDetails": "Ver Detalles"
+  },
+  "detail": {
+    "title": "Detalle del Torneo",
+    "date": "Fecha",
+    "location": "Lugar",
+    "description": "Descripción",
+    "descriptionText": "Torneo oficial de artes marciales. Categorías para todas las edades y niveles.",
+    "syncup": "Inscribirse",
+    "back": "Volver"
+  },
+  "form": {
+    "title": "Formulario de Inscripción",
+    "subtitle": "Inscripción de Atleta",
+    "athleteInfo": "INFORMACIÓN DEL ATLETA",
+    "inscriptionDetails": "DETALLES DE INSCRIPCIÓN",
+    "eventCoach": "EVENTO Y ENTRENADOR",
+    "fullName": "Nombre Completo",
+    "email": "Correo Electrónico",
+    "country": "País",
+    "age": "Edad",
+    "gender": "Género",
+    "academy": "Academia",
+    "weight": "Peso (kg)",
+    "athleteGrade": "Grado / Cinturón",
+    "categoryType": "Tipo de Categoría",
+    "eventName": "Nombre del Evento",
+    "coachName": "Nombre del Entrenador",
+    "reset": "Limpiar",
+    "register": "Registrar",
+    "success": "¡Atleta inscrito exitosamente!",
+    "required": "Campo requerido",
+    "invalidEmail": "Correo electrónico inválido",
+    "invalidAge": "Edad inválida",
+    "invalidWeight": "Peso inválido (kg)",
+    "selectGender": "-- Seleccionar Género --",
+    "selectGrade": "-- Seleccionar Grado --",
+    "selectCategory": "-- Seleccionar Categoría --"
+  },
+  "management": {
+    "title": "Mis Torneos",
+    "subtitle": "Torneos registrados",
+    "empty": "No tienes torneos registrados aún.",
+    "emptyHint": "Busca un torneo y regístrate para verlo aquí.",
+    "athlete": "Atleta",
+    "registered": "Registrado el"
+  }
+}
