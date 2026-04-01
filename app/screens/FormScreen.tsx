@@ -1,311 +1,460 @@
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Platform } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useAuth } from '../../context/AuthContext';
+import * as DB from '../../db/database';
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
-import {
-  Button,
-  Card,
-  Divider,
-  Snackbar,
-  Text,
-  useTheme,
-} from 'react-native-paper';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+  getTournamentById,
+  getAvailableModalities,
+  getWeightDivisionsForModality,
+  modalityHasWeights,
+  Tournament,
+  WeightClass,
+} from '../../data/tournaments';
 
-// ── Web-only pure HTML form ───────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-function WebForm() {
-  // Read URL params for pre-fill
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const tournamentName = params.get('tournamentName');
-    const tournamentId   = params.get('tournamentId');
+type Phase = 'info' | 'modality' | 'weight' | 'another' | 'success';
 
-    if (tournamentName) {
-      const el = document.getElementById('eventName-input') as HTMLInputElement;
-      if (el) el.value = decodeURIComponent(tournamentName);
-    }
+// ── Shared styles ─────────────────────────────────────────────────────────────
 
-    // Pre-fill from saved profile
-    AsyncStorage.getItem('kumite_profile').then(raw => {
-      if (!raw) return;
-      try {
-        const profile = JSON.parse(raw);
-        const set = (id: string, val: string) => {
-          const el = document.getElementById(id) as HTMLInputElement;
-          if (el && val) el.value = val;
-        };
-        if (profile.role === 'athlete') {
-          set('fullName-input',  profile.fullName);
-          set('email-input',     profile.email);
-          set('country-input',   profile.country);
-          set('age-input',       profile.age);
-          set('academy-input',   profile.academy);
-          set('weight-input',    profile.weight);
-          if (profile.gender) {
-            const g = document.getElementById('gender-input') as HTMLSelectElement;
-            if (g) g.value = profile.gender;
-          }
-          if (profile.beltGrade) {
-            const b = document.getElementById('athleteGrade-input') as HTMLSelectElement;
-            if (b) b.value = profile.beltGrade;
-          }
-        } else if (profile.role === 'coach') {
-          set('coachName-input', profile.fullName);
-        }
-      } catch {}
-    });
-  }, []);
+const S: any = {
+  page:         { minHeight: '100vh', background: '#f5f5f5', padding: 16, fontFamily: 'Roboto, sans-serif', overflowY: 'auto' },
+  card:         { maxWidth: 720, margin: '0 auto', background: '#fff', borderRadius: 14, padding: 32, boxShadow: '0 2px 12px rgba(0,0,0,0.12)' },
+  // Breadcrumb
+  crumbs:       { display: 'flex', gap: 6, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' },
+  crumb:        (active: boolean, done: boolean) => ({
+    fontSize: 12, padding: '3px 10px', borderRadius: 12,
+    background: done ? '#6750a4' : active ? '#ede7f6' : '#f0f0f0',
+    color: done ? '#fff' : active ? '#6750a4' : '#aaa',
+    fontWeight: active || done ? 700 : 400,
+  }),
+  crumbArrow:   { color: '#ccc', fontSize: 12 },
+  // Content
+  title:        { fontSize: 22, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 },
+  sub:          { color: '#666', fontSize: 14, marginBottom: 24 },
+  field:        { marginBottom: 18 },
+  label:        { display: 'block', fontSize: 13, color: '#555', marginBottom: 5, fontWeight: 500 },
+  input:        { width: '100%', height: 48, border: '1px solid #ddd', borderRadius: 8, padding: '0 14px', fontSize: 15, boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' },
+  select:       { width: '100%', height: 48, border: '1px solid #ddd', borderRadius: 8, paddingLeft: 14, fontSize: 15, boxSizing: 'border-box', background: '#fff', fontFamily: 'inherit' },
+  errorBox:     { color: '#b3261e', fontSize: 13, marginBottom: 16, padding: '10px 14px', background: '#fce8e6', borderRadius: 8 },
+  // Tile grids
+  grid2:        { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 16 },
+  grid3:        { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, marginBottom: 16 },
+  tile:         (selected: boolean) => ({
+    padding: '18px 14px', border: `2px solid ${selected ? '#6750a4' : '#e0e0e0'}`,
+    borderRadius: 12, cursor: 'pointer', background: selected ? '#f3eeff' : '#fafafa',
+    transition: 'all 0.15s', textAlign: 'center',
+  }),
+  tileIcon:     { fontSize: 36, marginBottom: 8, display: 'block' },
+  tileName:     { fontSize: 15, fontWeight: 700, color: '#1a1a2e' },
+  tileSub:      { fontSize: 12, color: '#888', marginTop: 4 },
+  // Chosen list
+  chosenBox:    { background: '#f3eeff', borderRadius: 10, padding: '12px 16px', marginBottom: 20 },
+  chosenTitle:  { fontSize: 13, fontWeight: 700, color: '#6750a4', marginBottom: 8 },
+  chosenItem:   { fontSize: 13, color: '#333', marginBottom: 4, display: 'flex', gap: 6, alignItems: 'center' },
+  chosenBadge:  { background: '#6750a4', color: '#fff', borderRadius: 4, padding: '1px 7px', fontSize: 11, fontWeight: 700 },
+  // Action buttons
+  actions:      { display: 'flex', gap: 12, marginTop: 24 },
+  btnBack:      { flex: 1, padding: 14, background: 'transparent', border: '1px solid #ccc', borderRadius: 24, color: '#666', fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' },
+  btnPrimary:   { flex: 2, padding: 14, background: '#6750a4', border: 'none', borderRadius: 24, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  btnSecondary: { flex: 1, padding: 14, background: 'transparent', border: '2px solid #6750a4', borderRadius: 24, color: '#6750a4', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+  // Success
+  successWrap:  { textAlign: 'center' as const },
+  successIcon:  { fontSize: 72, marginBottom: 16 },
+  successTitle: { fontSize: 24, fontWeight: 800, color: '#2e7d32', marginBottom: 8 },
+  successSub:   { color: '#555', fontSize: 15, marginBottom: 20 },
+  successCard:  { background: '#f9f9f9', borderRadius: 10, padding: '16px 20px', marginBottom: 24, textAlign: 'left' as const },
+  successRow:   { fontSize: 14, color: '#333', marginBottom: 6, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const },
+  successLabel: { fontWeight: 700, color: '#6750a4', minWidth: 80, display: 'inline-block' },
+  homeBtn:      { padding: '14px 32px', background: '#6750a4', border: 'none', borderRadius: 24, color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+};
 
-  const handleSubmit = () => {
-    const get = (id: string) => ((document.getElementById(id) as HTMLInputElement)?.value || '').trim();
-    const setErr = (id: string, msg: string) => {
-      const el = document.getElementById(`${id}-error`);
-      if (el) { el.textContent = msg; el.style.visibility = msg ? 'visible' : 'hidden'; }
-      const inp = document.getElementById(id) as HTMLInputElement;
-      if (inp) inp.style.borderColor = msg ? '#b3261e' : '#ccc';
-    };
-    const clearErr = (id: string) => setErr(id, '');
+const DISCIPLINE_ICONS: Record<string, string> = {
+  Kata:    '🥋',
+  Kumite:  '⚔️',
+  Gi:      '🏆',
+  'No-Gi': '🤼',
+  Judo:    '🥋',
+};
+function disciplineIcon(d: string) { return DISCIPLINE_ICONS[d] ?? '🥋'; }
 
-    const ids = ['fullName-input','email-input','country-input','age-input','gender-input',
-                 'academy-input','weight-input','athleteGrade-input','categoryType-input',
-                 'eventName-input','coachName-input'];
-    ids.forEach(clearErr);
+// ── Breadcrumb helper ─────────────────────────────────────────────────────────
 
-    const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-    const isNum   = (v: string) => !isNaN(parseFloat(v)) && parseFloat(v) > 0;
-
-    const v = {
-      fullName:     get('fullName-input'),
-      email:        get('email-input'),
-      country:      get('country-input'),
-      age:          get('age-input'),
-      gender:       get('gender-input'),
-      academy:      get('academy-input'),
-      weight:       get('weight-input'),
-      athleteGrade: get('athleteGrade-input'),
-      categoryType: get('categoryType-input'),
-      eventName:    get('eventName-input'),
-      coachName:    get('coachName-input'),
-    };
-
-    let hasError = false;
-    const err = (id: string, msg: string) => { setErr(id, msg); hasError = true; };
-
-    if (!v.fullName)            err('fullName-input',     'Full name is required');
-    if (!v.email)               err('email-input',        'Email is required');
-    else if (!isEmail(v.email)) err('email-input',        'Enter a valid email');
-    if (!v.gender)              err('gender-input',       'Gender is required');
-    if (!v.country)             err('country-input',      'Country is required');
-    if (!v.age)                 err('age-input',          'Age is required');
-    else if (!isNum(v.age))     err('age-input',          'Enter a valid age');
-    if (!v.weight)              err('weight-input',       'Weight is required');
-    else if (!isNum(v.weight))  err('weight-input',       'Enter a valid weight (kg)');
-    if (!v.academy)             err('academy-input',      'Academy is required');
-    if (!v.athleteGrade)        err('athleteGrade-input', 'Grade is required');
-    if (!v.coachName)           err('coachName-input',    'Coach name is required');
-    if (!v.eventName)           err('eventName-input',    'Event name is required');
-    if (!v.categoryType)        err('categoryType-input', 'Category type is required');
-
-    if (!hasError) {
-      // Save registration to AsyncStorage
-      const params = new URLSearchParams(window.location.search);
-      const tournamentId   = params.get('tournamentId')   || 'unknown';
-      const tournamentName = params.get('tournamentName') ? decodeURIComponent(params.get('tournamentName')!) : v.eventName;
-
-      AsyncStorage.getItem('kumite_registrations').then(raw => {
-        const existing = raw ? JSON.parse(raw) : [];
-        existing.push({ tournamentId, tournamentName, athleteName: v.fullName, timestamp: new Date().toISOString() });
-        AsyncStorage.setItem('kumite_registrations', JSON.stringify(existing));
-      });
-
-      console.log('Submitted:', v);
-      const banner = document.getElementById('success-message');
-      if (banner) { banner.style.display = 'block'; }
-      const form = document.querySelector('form') as HTMLFormElement;
-      if (form) form.reset();
-    }
+function Breadcrumbs({ phase, hasCategories }: { phase: Phase; hasCategories: boolean }) {
+  if (!hasCategories) return null;
+  const steps = ['info', 'modality', 'weight', 'success'] as Phase[];
+  const labels: Record<Phase, string> = {
+    info:     'Información',
+    modality: 'Modalidad',
+    weight:   'Peso',
+    another:  'Modalidad',
+    success:  'Confirmación',
   };
-
-  const handleReset = () => {
-    const ids = ['fullName-input','email-input','country-input','age-input','gender-input',
-                 'academy-input','weight-input','athleteGrade-input','categoryType-input',
-                 'eventName-input','coachName-input'];
-    ids.forEach(id => {
-      const errEl = document.getElementById(`${id}-error`);
-      if (errEl) { errEl.textContent = ''; errEl.style.visibility = 'hidden'; }
-      const inp = document.getElementById(id) as HTMLInputElement;
-      if (inp) inp.style.borderColor = '#ccc';
-    });
-    const banner = document.getElementById('success-message');
-    if (banner) banner.style.display = 'none';
-    const form = document.querySelector('form') as HTMLFormElement;
-    if (form) form.reset();
-  };
-
-  const s: any = {
-    page:      { minHeight: '100vh', background: '#f5f5f5', padding: 16, fontFamily: 'Roboto, sans-serif' },
-    card:      { maxWidth: 760, margin: '0 auto', background: '#fff', borderRadius: 12, padding: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.12)' },
-    title:     { fontSize: 24, fontWeight: 700, marginBottom: 4 },
-    sub:       { color: '#666', marginBottom: 20, fontSize: 14 },
-    section:   { color: '#6750a4', fontWeight: 700, fontSize: 12, letterSpacing: 1.2, marginTop: 20, marginBottom: 4 },
-    divider:   { border: 'none', borderTop: '1px solid #e0e0e0', marginBottom: 16 },
-    field:     { marginBottom: 12 },
-    label:     { display: 'block', fontSize: 12, color: '#555', marginBottom: 4 },
-    input:     { width: '100%', height: 48, border: '1px solid #ccc', borderRadius: 4, padding: '0 12px', fontSize: 16, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' },
-    select:    { width: '100%', height: 48, border: '1px solid #ccc', borderRadius: 4, paddingLeft: 12, fontSize: 16, boxSizing: 'border-box', background: '#fff', fontFamily: 'inherit' },
-    errTxt:    { color: '#b3261e', fontSize: 12, marginTop: 2, visibility: 'hidden', minHeight: 18 },
-    success:   { background: '#eaddff', borderRadius: 8, padding: 12, marginBottom: 16, textAlign: 'center', color: '#21005d', display: 'none' },
-    actions:   { display: 'flex', gap: 12, marginTop: 20, justifyContent: 'flex-end' },
-    resetBtn:  { flex: 1, padding: '10px 16px', border: '1px solid #6750a4', borderRadius: 20, background: 'transparent', color: '#6750a4', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' },
-    submitBtn: { flex: 2, padding: '10px 24px', background: '#6750a4', border: 'none', borderRadius: 20, color: '#fff', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' },
-  };
-
-  const Field = ({ id, label, type = 'text', placeholder }: { id: string; label: string; type?: string; placeholder: string }) => (
-    <div style={s.field}>
-      <label style={s.label} htmlFor={id}>{label}</label>
-      <input id={id} name={id} data-testid={id} type={type} placeholder={placeholder} style={s.input} />
-      <div id={`${id}-error`} data-testid={`${id}-error`} style={s.errTxt}></div>
-    </div>
-  );
-
-  const Select = ({ id, label, options }: { id: string; label: string; options: string[] }) => (
-    <div style={s.field}>
-      <label style={s.label} htmlFor={id}>{label}</label>
-      <select id={id} name={id} data-testid={id} style={s.select}>
-        <option value="">-- Select {label} --</option>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-      <div id={`${id}-error`} data-testid={`${id}-error`} style={s.errTxt}></div>
-    </div>
-  );
+  const currentIdx = phase === 'another' ? 2 : steps.indexOf(phase);
 
   return (
-    <div style={s.page}>
-      <div style={s.card}>
-        <div style={s.title}>🏆 Inscripción al Torneo</div>
-        <div style={s.sub}>Formulario de Inscripción de Atleta</div>
+    <div style={S.crumbs}>
+      {steps.map((s, i) => (
+        <React.Fragment key={s}>
+          {i > 0 && <span style={S.crumbArrow}>›</span>}
+          <span style={S.crumb(i === currentIdx, i < currentIdx)}>{labels[s]}</span>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
 
-        <div id="success-message" data-testid="success-message" style={s.success}>
-          ✓ Athlete registered successfully!
-        </div>
+// ── Main wizard ───────────────────────────────────────────────────────────────
 
-        <form noValidate>
-          <div style={s.section}>INFORMACIÓN DEL ATLETA</div>
-          <hr style={s.divider} />
-          <Field id="fullName-input"  label="Nombre Completo"  placeholder="Nombre Completo" />
-          <Field id="email-input"     label="Correo Electrónico" placeholder="Correo Electrónico" type="email" />
-          <Field id="country-input"   label="País"             placeholder="País" />
-          <Field id="age-input"       label="Edad"             placeholder="Edad" type="number" />
-          <Select id="gender-input"   label="Género"           options={['Masculino','Femenino','Otro']} />
+function WebWizard({ currentUser, tournament }: { currentUser: DB.User; tournament: Tournament | null }) {
+  const router = useRouter();
+  const hasCategories = (tournament?.categories.length ?? 0) > 0;
 
-          <div style={s.section}>DETALLES DE INSCRIPCIÓN</div>
-          <hr style={s.divider} />
-          <Field id="academy-input"       label="Academia"               placeholder="Academia" />
-          <Field id="weight-input"        label="Peso (kg)"              placeholder="Peso (kg)" type="number" />
-          <Select id="athleteGrade-input" label="Grado / Cinturón"       options={['Blanco','Azul','Morado','Café','Negro']} />
-          <Select id="categoryType-input" label="Tipo de Categoría"      options={['Gi','No-Gi','Wrestling','Judo','Sambo']} />
+  const ageGroup = parseInt(currentUser.age) < 18 ? 'Sub-18' : 'Adulto';
 
-          <div style={s.section}>EVENTO Y ENTRENADOR</div>
-          <hr style={s.divider} />
-          <Field id="eventName-input" label="Nombre del Evento"      placeholder="Nombre del Evento" />
-          <Field id="coachName-input" label="Nombre del Entrenador"  placeholder="Nombre del Entrenador" />
+  const [phase,             setPhase]            = useState<Phase>('info');
+  const [academy,           setAcademy]          = useState(currentUser.academy   || '');
+  const [grade,             setGrade]            = useState(currentUser.beltGrade || '');
+  const [chosenModalities,  setChosenModalities] = useState<DB.ModalityEntry[]>([]);
+  const [currentDiscipline, setCurrentDiscipline] = useState<string | null>(null);
+  const [error,             setError]            = useState('');
 
-          <div style={s.actions}>
-            <button type="button" onClick={handleReset}  style={s.resetBtn}>↺ Limpiar</button>
-            <button type="button" onClick={handleSubmit} style={s.submitBtn}>➤ Registrar</button>
+  // All disciplines available for this athlete's profile
+  const allModalities: string[] = tournament && hasCategories
+    ? getAvailableModalities(tournament, grade, currentUser.gender, parseInt(currentUser.age) || 25)
+    : [];
+
+  // Disciplines not yet chosen
+  const remainingModalities = allModalities.filter(
+    d => !chosenModalities.some(m => m.discipline === d),
+  );
+
+  // Weight divisions for the discipline currently being configured
+  const weightDivisions: WeightClass[] = tournament && currentDiscipline
+    ? getWeightDivisionsForModality(tournament, currentDiscipline, grade, currentUser.gender, parseInt(currentUser.age) || 25)
+    : [];
+
+  const saveAndFinish = (modalities: DB.ModalityEntry[]) => {
+    DB.addRegistration({
+      userId:         currentUser.id,
+      tournamentId:   tournament?.id        ?? 'unknown',
+      tournamentName: tournament?.name       ?? '',
+      athleteName:    currentUser.fullName,
+      modalities,
+      timestamp:      new Date().toISOString(),
+    });
+    setPhase('success');
+  };
+
+  // ── Phase handlers ──────────────────────────────────────────────────────────
+
+  const submitInfo = () => {
+    setError('');
+    if (!academy.trim())                   { setError('Academia es requerida');         return; }
+    if (tournament?.grades.length && !grade) { setError('Grado es requerido');            return; }
+    if (!hasCategories) {
+      saveAndFinish([]);
+    } else {
+      setPhase('modality');
+    }
+  };
+
+  const pickModality = (discipline: string) => {
+    setError('');
+    setCurrentDiscipline(discipline);
+    const hasW = tournament ? modalityHasWeights(tournament, discipline, grade, currentUser.gender, parseInt(currentUser.age) || 25) : false;
+    if (hasW) {
+      setPhase('weight');
+    } else {
+      // No weight division — add directly
+      const entry: DB.ModalityEntry = { discipline, weightDivision: null, gender: currentUser.gender, ageGroup };
+      const updated = [...chosenModalities, entry];
+      setChosenModalities(updated);
+      const remaining = allModalities.filter(d => !updated.some(m => m.discipline === d));
+      if (remaining.length === 0) {
+        saveAndFinish(updated);
+      } else {
+        setPhase('another');
+      }
+    }
+  };
+
+  const pickWeight = (wc: WeightClass) => {
+    setError('');
+    const entry: DB.ModalityEntry = { discipline: currentDiscipline!, weightDivision: wc.label, gender: currentUser.gender, ageGroup };
+    const updated = [...chosenModalities, entry];
+    setChosenModalities(updated);
+    const remaining = allModalities.filter(d => !updated.some(m => m.discipline === d));
+    if (remaining.length === 0) {
+      saveAndFinish(updated);
+    } else {
+      setPhase('another');
+    }
+  };
+
+  const addAnother = () => {
+    setCurrentDiscipline(null);
+    setPhase('modality');
+  };
+
+  const finishNow = () => {
+    saveAndFinish(chosenModalities);
+  };
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+
+  return (
+    <div style={S.page}>
+      <div style={S.card}>
+        <Breadcrumbs phase={phase} hasCategories={hasCategories} />
+
+        {/* ── INFO ─────────────────────────────────────────────────────────── */}
+        {phase === 'info' && (
+          <>
+            <div style={S.title}>🥋 Información del Atleta</div>
+            <div style={S.sub}>{tournament ? `Inscripción: ${tournament.name}` : 'Inscripción al Torneo'}</div>
+            {error && <div style={S.errorBox}>{error}</div>}
+
+            <div style={S.field}>
+              <label style={S.label} htmlFor="academy-input">Tu Academia *</label>
+              <input
+                id="academy-input"
+                data-testid="academy-input"
+                style={S.input}
+                placeholder="Nombre de tu academia"
+                value={academy}
+                onChange={(e: any) => setAcademy(e.target.value)}
+              />
+            </div>
+
+            {tournament && tournament.grades.length > 0 && (
+              <div style={S.field}>
+                <label style={S.label} htmlFor="grade-input">Grado *</label>
+                <select
+                  id="grade-input"
+                  data-testid="grade-input"
+                  style={S.select}
+                  value={grade}
+                  onChange={(e: any) => setGrade(e.target.value)}
+                >
+                  <option value="">-- Seleccionar --</option>
+                  {tournament.grades.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+            )}
+
+            <div style={S.actions}>
+              <button style={S.btnBack} type="button" onClick={() => router.back()}>← Atrás</button>
+              <button style={S.btnPrimary} type="button" onClick={submitInfo}>
+                {hasCategories ? 'Siguiente →' : 'Inscribirse →'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── MODALITY ─────────────────────────────────────────────────────── */}
+        {phase === 'modality' && (
+          <>
+            <div style={S.title}>🏅 Elige tu Modalidad</div>
+            <div style={S.sub}>
+              {remainingModalities.length > 0
+                ? `${remainingModalities.length} modalidad${remainingModalities.length > 1 ? 'es' : ''} disponible${remainingModalities.length > 1 ? 's' : ''}`
+                : 'No hay más modalidades disponibles'}
+            </div>
+
+            {chosenModalities.length > 0 && (
+              <div style={S.chosenBox}>
+                <div style={S.chosenTitle}>Ya inscrito en:</div>
+                {chosenModalities.map((m, i) => (
+                  <div key={i} style={S.chosenItem}>
+                    <span style={S.chosenBadge}>{m.discipline}</span>
+                    {m.weightDivision && <span>{m.weightDivision}</span>}
+                    <span style={{ color: '#aaa' }}>· {m.gender} · {m.ageGroup}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {error && <div style={S.errorBox}>{error}</div>}
+
+            <div style={S.grid2} data-testid="modality-grid">
+              {remainingModalities.map(d => (
+                <div
+                  key={d}
+                  data-testid={`modality-tile-${d.toLowerCase().replace(/\s+/g, '-')}`}
+                  style={S.tile(false)}
+                  onClick={() => pickModality(d)}
+                >
+                  <span style={S.tileIcon}>{disciplineIcon(d)}</span>
+                  <div style={S.tileName}>{d}</div>
+                  <div style={S.tileSub}>
+                    {tournament && modalityHasWeights(tournament, d, grade, currentUser.gender, parseInt(currentUser.age) || 25)
+                      ? 'Con división de peso'
+                      : 'Sin división de peso'}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={S.actions}>
+              <button style={S.btnBack} type="button" onClick={() => {
+                if (chosenModalities.length > 0) setPhase('another');
+                else setPhase('info');
+              }}>← Atrás</button>
+            </div>
+          </>
+        )}
+
+        {/* ── WEIGHT ───────────────────────────────────────────────────────── */}
+        {phase === 'weight' && (
+          <>
+            <div style={S.title}>⚖️ División de Peso</div>
+            <div style={S.sub}>
+              Modalidad: <strong>{currentDiscipline}</strong> · {currentUser.gender} · {ageGroup}
+            </div>
+
+            {error && <div style={S.errorBox}>{error}</div>}
+
+            <div style={S.grid3} data-testid="weight-grid">
+              {weightDivisions.map(wc => (
+                <div
+                  key={wc.id}
+                  data-testid={`weight-tile-${wc.id}`}
+                  style={S.tile(false)}
+                  onClick={() => pickWeight(wc)}
+                >
+                  <span style={S.tileIcon}>⚖️</span>
+                  <div style={S.tileName}>{wc.label}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={S.actions}>
+              <button style={S.btnBack} type="button" onClick={() => setPhase('modality')}>← Atrás</button>
+            </div>
+          </>
+        )}
+
+        {/* ── ANOTHER? ─────────────────────────────────────────────────────── */}
+        {phase === 'another' && (
+          <>
+            <div style={S.title}>✅ Modalidad Agregada</div>
+            <div style={S.sub}>¿Deseas inscribirte en otra modalidad?</div>
+
+            <div style={S.chosenBox}>
+              <div style={S.chosenTitle}>Modalidades seleccionadas:</div>
+              {chosenModalities.map((m, i) => (
+                <div key={i} style={S.chosenItem}>
+                  <span style={S.chosenBadge}>{m.discipline}</span>
+                  {m.weightDivision && <span>{m.weightDivision}</span>}
+                  <span style={{ color: '#aaa' }}>· {m.gender} · {m.ageGroup}</span>
+                </div>
+              ))}
+            </div>
+
+            {remainingModalities.length > 0 ? (
+              <>
+                <div style={{ color: '#555', fontSize: 14, marginBottom: 20 }}>
+                  Modalidades disponibles: <strong>{remainingModalities.join(', ')}</strong>
+                </div>
+                <div style={S.actions}>
+                  <button
+                    data-testid="btn-finish-now"
+                    style={S.btnSecondary}
+                    type="button"
+                    onClick={finishNow}
+                  >
+                    No, finalizar
+                  </button>
+                  <button
+                    data-testid="btn-add-another"
+                    style={S.btnPrimary}
+                    type="button"
+                    onClick={addAnother}
+                  >
+                    Sí, agregar otra →
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={S.actions}>
+                <button
+                  data-testid="btn-finish-now"
+                  style={S.btnPrimary}
+                  type="button"
+                  onClick={finishNow}
+                >
+                  Finalizar inscripción →
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── SUCCESS ──────────────────────────────────────────────────────── */}
+        {phase === 'success' && (
+          <div data-testid="success-message" style={S.successWrap}>
+            <div style={S.successIcon}>🏆</div>
+            <div style={S.successTitle}>✓ ¡Inscripción Exitosa!</div>
+            <div style={S.successSub}>
+              {tournament ? `Has sido inscrito en ${tournament.name}` : 'Has sido inscrito exitosamente'}
+            </div>
+
+            {chosenModalities.length > 0 && (
+              <div style={S.successCard}>
+                <div style={{ fontWeight: 700, color: '#6750a4', fontSize: 14, marginBottom: 12 }}>
+                  Modalidades inscritas:
+                </div>
+                {chosenModalities.map((m, i) => (
+                  <div key={i} style={{ ...S.successRow, paddingBottom: 10, borderBottom: i < chosenModalities.length - 1 ? '1px solid #eee' : 'none', marginBottom: 10 }}>
+                    <span style={S.successLabel}>Modalidad</span>
+                    <strong>{m.discipline}</strong>
+                    {m.weightDivision && (
+                      <>
+                        <span style={S.successLabel}>Peso</span>
+                        <span>{m.weightDivision}</span>
+                      </>
+                    )}
+                    <span style={S.successLabel}>Género</span>
+                    <span>{m.gender}</span>
+                    <span style={S.successLabel}>Categoría</span>
+                    <span>{m.ageGroup}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              data-testid="btn-volver-inicio"
+              style={S.homeBtn}
+              type="button"
+              onClick={() => router.replace('/screens/MainScreen' as any)}
+            >
+              🏠 Volver al Inicio
+            </button>
           </div>
-        </form>
+        )}
       </div>
     </div>
   );
 }
 
-// ── Native Material form ──────────────────────────────────────────────────────
-
-function NativeForm() {
-  const theme = useTheme();
-  const [form, setForm]     = useState({ fullName:'', email:'', gender:'', country:'', age:'', weight:'', academy:'', athleteGrade:'', coachName:'', eventName:'', categoryType:'' });
-  const [errors, setErrors] = useState<Record<string,string>>({});
-  const [snack, setSnack]   = useState(false);
-
-  const set = (k: string) => (v: string) => setForm(p => ({...p,[k]:v}));
-
-  const validate = () => {
-    const e: Record<string,string> = {};
-    if (!form.fullName.trim())  e.fullName = 'Nombre requerido';
-    if (!form.email.trim())     e.email    = 'Correo requerido';
-    if (!form.country.trim())   e.country  = 'País requerido';
-    if (!form.age.trim())       e.age      = 'Edad requerida';
-    if (!form.gender)           e.gender   = 'Género requerido';
-    if (!form.academy.trim())   e.academy  = 'Academia requerida';
-    if (!form.weight.trim())    e.weight   = 'Peso requerido';
-    if (!form.athleteGrade)     e.athleteGrade = 'Grado requerido';
-    if (!form.categoryType)     e.categoryType = 'Categoría requerida';
-    if (!form.eventName.trim()) e.eventName = 'Evento requerido';
-    if (!form.coachName.trim()) e.coachName = 'Entrenador requerido';
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
-  const { TextInput, HelperText } = require('react-native-paper');
-
-  const Field = ({ label, field, type='default' }: { label:string; field:string; type?:string }) => (
-    <View style={{marginBottom:4}}>
-      <TextInput label={label} value={(form as any)[field]} onChangeText={set(field)}
-        mode="outlined" error={!!(errors as any)[field]}
-        keyboardType={type==='email'?'email-address':type==='number'?'numeric':'default'}
-        autoCapitalize={type==='email'?'none':'words'} testID={`${field}-input`} />
-      <HelperText type="error" visible={!!(errors as any)[field]} testID={`${field}-input-error`}>
-        {(errors as any)[field]}
-      </HelperText>
-    </View>
-  );
-
-  return (
-    <KeyboardAvoidingView style={{flex:1,backgroundColor:theme.colors.background}} behavior="height">
-      <ScrollView contentContainerStyle={{padding:16,paddingBottom:32}} keyboardShouldPersistTaps="handled">
-        <Card style={{borderRadius:12}} elevation={3}>
-          <Card.Content>
-            <Text variant="headlineMedium" style={{fontWeight:'700',marginBottom:4}}>🏆 Inscripción al Torneo</Text>
-            <Text variant="bodyMedium" style={{color:theme.colors.onSurfaceVariant,marginBottom:20}}>Formulario de Inscripción</Text>
-            <Text variant="titleSmall" style={{color:theme.colors.primary,fontWeight:'700',marginBottom:4}}>ATLETA</Text>
-            <Divider style={{marginBottom:12}} />
-            <Field label="Nombre Completo"  field="fullName" />
-            <Field label="Correo"           field="email"   type="email" />
-            <Field label="País"             field="country" />
-            <Field label="Edad"             field="age"     type="number" />
-            <Field label="Género"           field="gender" />
-            <Text variant="titleSmall" style={{color:theme.colors.primary,fontWeight:'700',marginTop:16,marginBottom:4}}>INSCRIPCIÓN</Text>
-            <Divider style={{marginBottom:12}} />
-            <Field label="Academia"        field="academy" />
-            <Field label="Peso (kg)"       field="weight"  type="number" />
-            <Field label="Grado"           field="athleteGrade" />
-            <Field label="Categoría"       field="categoryType" />
-            <Text variant="titleSmall" style={{color:theme.colors.primary,fontWeight:'700',marginTop:16,marginBottom:4}}>EVENTO</Text>
-            <Divider style={{marginBottom:12}} />
-            <Field label="Nombre del Evento"     field="eventName" />
-            <Field label="Nombre del Entrenador" field="coachName" />
-            <View style={{flexDirection:'row',gap:12,marginTop:16}}>
-              <Button mode="outlined"  onPress={()=>{setForm({fullName:'',email:'',gender:'',country:'',age:'',weight:'',academy:'',athleteGrade:'',coachName:'',eventName:'',categoryType:''});setErrors({});}} style={{flex:1}} icon="refresh">Limpiar</Button>
-              <Button mode="contained" onPress={()=>{if(validate()){setSnack(true);}}} style={{flex:2}} icon="send">Registrar</Button>
-            </View>
-          </Card.Content>
-        </Card>
-      </ScrollView>
-      <Snackbar visible={snack} onDismiss={()=>setSnack(false)} duration={4000}>¡Atleta inscrito exitosamente!</Snackbar>
-    </KeyboardAvoidingView>
-  );
-}
+// ── Entry point ───────────────────────────────────────────────────────────────
 
 export default function FormScreen() {
-  if (Platform.OS === 'web') return <WebForm />;
-  return <NativeForm />;
-}
+  const router  = useRouter();
+  const { currentUser, isLoading } = useAuth();
+  const params  = useLocalSearchParams<{ tournamentId?: string; tournamentName?: string }>();
 
-const styles = StyleSheet.create({});
+  const tournament = params.tournamentId ? getTournamentById(String(params.tournamentId)) ?? null : null;
+
+  useEffect(() => {
+    if (!isLoading && !currentUser) {
+      router.replace('/screens/HomeScreen');
+    }
+  }, [currentUser, isLoading]);
+
+  if (isLoading || !currentUser) return null;
+  return <WebWizard currentUser={currentUser} tournament={tournament} />;
+}

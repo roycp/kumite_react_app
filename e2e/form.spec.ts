@@ -1,142 +1,190 @@
 import { expect, test, Page } from '@playwright/test';
 
-// Use DOM evaluate for fills — Playwright fill() is unreliable with Expo web static output
-async function typeInto(page: Page, id: string, text: string) {
-  await page.evaluate(({ id, text }) => {
-    const el = document.getElementById(id) as HTMLInputElement;
-    if (el) { el.value = text; el.dispatchEvent(new Event('input', { bubbles: true })); }
-  }, { id, text });
+async function injectAuth(page: Page) {
+  await page.addInitScript(() => {
+    const user = {
+      id: 'test-user-1', email: 'roy@example.com', passwordHash: 'abc123',
+      role: 'athlete', fullName: 'Roy Cruz', country: 'Costa Rica',
+      age: '25', gender: 'Masculino', academy: 'Team Ares',
+      weight: '75', beltGrade: 'Azul', createdAt: '2026-01-01T00:00:00.000Z', synced: false,
+    };
+    localStorage.setItem('db:users', JSON.stringify([user]));
+    localStorage.setItem('db:session_user_id', user.id);
+  });
 }
 
-async function selectDropdown(page: Page, id: string, option: string) {
-  await page.evaluate(({ id, option }) => {
-    const el = document.getElementById(id) as HTMLSelectElement;
-    if (el) { el.value = option; el.dispatchEvent(new Event('change', { bubbles: true })); }
-  }, { id, option });
-}
+// ── Tournament 4 = Central America Gi Open (BJJ, has categories) ──────────────
 
-async function clickButton(page: Page, name: RegExp) {
-  await page.evaluate((nameStr) => {
-    const btns = Array.from(document.querySelectorAll('button'));
-    const btn = btns.find(b => nameStr.test(b.textContent || ''));
-    if (btn) btn.scrollIntoView({ block: 'center' });
-  }, name);
-  await page.waitForTimeout(200);
-  const btn = page.getByRole('button', { name });
-  await btn.click({ force: true });
-}
-
-async function expectFieldError(page: Page, testId: string, message: string) {
-  const el = page.locator(`[data-testid="${testId}-error"]`).first();
-  await expect(el).toHaveText(message, { timeout: 8000 });
-}
-
-// Spanish option values (form uses Spanish)
-const validForm = {
-  fullName:     'Roy Cruz',
-  email:        'roy@example.com',
-  country:      'Costa Rica',
-  age:          '25',
-  gender:       'Masculino',
-  academy:      'Team Ares',
-  weight:       '75',
-  athleteGrade: 'Azul',
-  categoryType: 'Gi',
-  eventName:    'Campeonato Nacional 2026',
-  coachName:    'Coach Silva',
-};
-
-async function fillFullForm(page: Page) {
-  await typeInto(page, 'fullName-input',  validForm.fullName);
-  await typeInto(page, 'email-input',     validForm.email);
-  await typeInto(page, 'country-input',   validForm.country);
-  await typeInto(page, 'age-input',       validForm.age);
-  await typeInto(page, 'academy-input',   validForm.academy);
-  await typeInto(page, 'weight-input',    validForm.weight);
-  await typeInto(page, 'eventName-input', validForm.eventName);
-  await typeInto(page, 'coachName-input', validForm.coachName);
-  await selectDropdown(page, 'gender-input',       validForm.gender);
-  await selectDropdown(page, 'athleteGrade-input', validForm.athleteGrade);
-  await selectDropdown(page, 'categoryType-input', validForm.categoryType);
-}
-
-test.describe('Tournament Registration Form', () => {
+test.describe('Registration Wizard — tournament WITH categories (BJJ)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/screens/FormScreen');
-    await page.waitForSelector('#fullName-input', { timeout: 30000 });
-    await page.waitForTimeout(500); // let useEffect pre-fill settle
-  });
-
-  test('should load the form with all fields', async ({ page }) => {
-    const jsErrors: string[] = [];
-    page.on('console', msg => { if (msg.type() === 'error') jsErrors.push(msg.text()); });
-
-    await expect(page.getByText('🏆 Inscripción al Torneo').first()).toBeVisible();
-    await expect(page.getByText('Formulario de Inscripción de Atleta')).toBeVisible();
-    await expect(page.getByText('INFORMACIÓN DEL ATLETA')).toBeVisible();
-    await expect(page.getByText('DETALLES DE INSCRIPCIÓN')).toBeVisible();
-    await expect(page.getByText('EVENTO Y ENTRENADOR')).toBeVisible();
-
-    for (const id of [
-      'fullName-input','email-input','country-input','age-input',
-      'gender-input','academy-input','weight-input',
-      'athleteGrade-input','categoryType-input',
-      'eventName-input','coachName-input',
-    ]) {
-      await expect(page.locator(`#${id}`).first()).toBeVisible();
-    }
-
-    await expect(page.getByRole('button', { name: /registrar/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /limpiar/i })).toBeVisible();
-    expect(jsErrors).toHaveLength(0);
-  });
-
-  test('should fill all fields and submit successfully', async ({ page }) => {
-    await fillFullForm(page);
-
-    // Verify via DOM (not fill/toHaveValue which is unreliable with Expo web)
-    const fullNameVal = await page.evaluate(() => (document.getElementById('fullName-input') as HTMLInputElement)?.value);
-    const emailVal    = await page.evaluate(() => (document.getElementById('email-input') as HTMLInputElement)?.value);
-    const genderVal   = await page.evaluate(() => (document.getElementById('gender-input') as HTMLSelectElement)?.value);
-    expect(fullNameVal).toBe(validForm.fullName);
-    expect(emailVal).toBe(validForm.email);
-    expect(genderVal).toBe(validForm.gender);
-
-    await clickButton(page, /registrar/i);
-    await expect(page.getByTestId('success-message')).toBeVisible({ timeout: 8000 });
-    await expect(page.getByText('✓ Athlete registered successfully!')).toBeVisible();
-  });
-
-  test('should show validation errors for all empty required fields', async ({ page }) => {
-    await clickButton(page, /registrar/i);
-
-    await expectFieldError(page, 'fullName-input',     'Full name is required');
-    await expectFieldError(page, 'email-input',        'Email is required');
-    await expectFieldError(page, 'country-input',      'Country is required');
-    await expectFieldError(page, 'age-input',          'Age is required');
-    await expectFieldError(page, 'gender-input',       'Gender is required');
-    await expectFieldError(page, 'academy-input',      'Academy is required');
-    await expectFieldError(page, 'weight-input',       'Weight is required');
-    await expectFieldError(page, 'athleteGrade-input', 'Grade is required');
-    await expectFieldError(page, 'categoryType-input', 'Category type is required');
-    await expectFieldError(page, 'eventName-input',    'Event name is required');
-    await expectFieldError(page, 'coachName-input',    'Coach name is required');
-  });
-
-  test('should reset the form and allow re-submission', async ({ page }) => {
-    await typeInto(page, 'fullName-input', 'Initial Name');
-    await typeInto(page, 'academy-input',  'Initial Academy');
-
-    await clickButton(page, /limpiar/i);
+    await injectAuth(page);
+    await page.goto('/screens/FormScreen?tournamentId=4&tournamentName=Central%20America%20Gi%20Open');
+    await page.waitForSelector('#academy-input', { timeout: 30000 });
     await page.waitForTimeout(300);
-
-    const fullNameVal = await page.evaluate(() => (document.getElementById('fullName-input') as HTMLInputElement)?.value);
-    const academyVal  = await page.evaluate(() => (document.getElementById('academy-input') as HTMLInputElement)?.value);
-    expect(fullNameVal).toBe('');
-    expect(academyVal).toBe('');
-
-    await fillFullForm(page);
-    await clickButton(page, /registrar/i);
-    await expect(page.getByTestId('success-message')).toBeVisible({ timeout: 8000 });
   });
+
+  test('should load Step 1 with pre-filled academy and grade', async ({ page }) => {
+    await expect(page.locator('#academy-input')).toBeVisible();
+    await expect(page.locator('#grade-input')).toBeVisible();
+    await expect(page.getByText(/Central America Gi Open/)).toBeVisible();
+
+    const academyVal = await page.evaluate(() => (document.getElementById('academy-input') as HTMLInputElement)?.value);
+    const gradeVal   = await page.evaluate(() => (document.getElementById('grade-input')   as HTMLSelectElement)?.value);
+    expect(academyVal).toBe('Team Ares');
+    expect(gradeVal).toBe('Azul');
+  });
+
+  test('should advance to modality selection on next', async ({ page }) => {
+    await page.getByRole('button', { name: /siguiente/i }).click();
+    await expect(page.locator('[data-testid="modality-grid"]')).toBeVisible({ timeout: 8000 });
+    // BJJ has only one discipline: Gi
+    await expect(page.locator('[data-testid="modality-tile-gi"]')).toBeVisible();
+  });
+
+  test('should show weight grid after picking a weighted modality (Gi)', async ({ page }) => {
+    await page.getByRole('button', { name: /siguiente/i }).click();
+    await page.waitForSelector('[data-testid="modality-tile-gi"]', { timeout: 8000 });
+    await page.locator('[data-testid="modality-tile-gi"]').click();
+
+    await expect(page.locator('[data-testid="weight-grid"]')).toBeVisible({ timeout: 5000 });
+    // Athlete is 75 kg → tile w70_80 should be visible
+    await expect(page.locator('[data-testid="weight-tile-w70_80"]')).toBeVisible();
+  });
+
+  test('should reach success after info → modality → weight → finish', async ({ page }) => {
+    // Step 1 → modality
+    await page.getByRole('button', { name: /siguiente/i }).click();
+    await page.waitForSelector('[data-testid="modality-tile-gi"]', { timeout: 8000 });
+
+    // Pick Gi
+    await page.locator('[data-testid="modality-tile-gi"]').click();
+
+    // Pick weight (70-80 kg)
+    await page.waitForSelector('[data-testid="weight-tile-w70_80"]', { timeout: 5000 });
+    await page.locator('[data-testid="weight-tile-w70_80"]').click();
+
+    // Only one modality → goes straight to success
+    await expect(page.locator('[data-testid="success-message"]')).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(/Inscripción Exitosa/)).toBeVisible();
+    await expect(page.locator('[data-testid="btn-volver-inicio"]')).toBeVisible();
+  });
+
+  test('should navigate back: weight → modality → info', async ({ page }) => {
+    await page.getByRole('button', { name: /siguiente/i }).click();
+    await page.waitForSelector('[data-testid="modality-grid"]', { timeout: 8000 });
+    await page.locator('[data-testid="modality-tile-gi"]').click();
+    await page.waitForSelector('[data-testid="weight-grid"]', { timeout: 5000 });
+
+    // Back from weight → modality
+    await page.getByRole('button', { name: /atrás/i }).click();
+    await expect(page.locator('[data-testid="modality-grid"]')).toBeVisible({ timeout: 5000 });
+
+    // Back from modality → info
+    await page.getByRole('button', { name: /atrás/i }).click();
+    await expect(page.locator('#academy-input')).toBeVisible({ timeout: 5000 });
+  });
+});
+
+// ── Tournament 3 = Kyokushin (has Kata + Kumite) ──────────────────────────────
+// User beltGrade 'Azul' is NOT in Kyokushin grade list → modality screen won't
+// match. We need a user with a Kyokushin grade. Override in this describe block.
+
+async function injectAuthKyokushin(page: Page) {
+  await page.addInitScript(() => {
+    const user = {
+      id: 'test-user-kyo', email: 'kyo@example.com', passwordHash: 'abc123',
+      role: 'athlete', fullName: 'Kenji Sato', country: 'Japón',
+      age: '25', gender: 'Masculino', academy: 'Dojo Kyokushin',
+      weight: '75', beltGrade: '3° Kyu', createdAt: '2026-01-01T00:00:00.000Z', synced: false,
+    };
+    localStorage.setItem('db:users', JSON.stringify([user]));
+    localStorage.setItem('db:session_user_id', user.id);
+  });
+}
+
+test.describe('Registration Wizard — Kyokushin (Kata + Kumite)', () => {
+  test.beforeEach(async ({ page }) => {
+    await injectAuthKyokushin(page);
+    await page.goto('/screens/FormScreen?tournamentId=3&tournamentName=Copa%20Centroamericana%20Kyokushin%202026');
+    await page.waitForSelector('#academy-input', { timeout: 30000 });
+    await page.waitForTimeout(300);
+  });
+
+  test('should show both Kata and Kumite modality tiles', async ({ page }) => {
+    await page.getByRole('button', { name: /siguiente/i }).click();
+    await page.waitForSelector('[data-testid="modality-grid"]', { timeout: 8000 });
+
+    await expect(page.locator('[data-testid="modality-tile-kata"]')).toBeVisible();
+    await expect(page.locator('[data-testid="modality-tile-kumite"]')).toBeVisible();
+  });
+
+  test('Kata (no weight) → "another?" screen shown → can add Kumite', async ({ page }) => {
+    await page.getByRole('button', { name: /siguiente/i }).click();
+    await page.waitForSelector('[data-testid="modality-grid"]', { timeout: 8000 });
+
+    // Pick Kata (no weight)
+    await page.locator('[data-testid="modality-tile-kata"]').click();
+
+    // Should land on "another?" screen (not weight screen)
+    await expect(page.locator('[data-testid="btn-add-another"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="btn-finish-now"]')).toBeVisible();
+
+    // Say yes → pick Kumite
+    await page.locator('[data-testid="btn-add-another"]').click();
+    await page.waitForSelector('[data-testid="modality-tile-kumite"]', { timeout: 5000 });
+    await page.locator('[data-testid="modality-tile-kumite"]').click();
+
+    // Kumite has weight → pick a weight
+    await page.waitForSelector('[data-testid="weight-grid"]', { timeout: 5000 });
+    await page.locator('[data-testid="weight-tile-w70_80"]').click();
+
+    // No more modalities → success
+    await expect(page.locator('[data-testid="success-message"]')).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(/Inscripción Exitosa/)).toBeVisible();
+  });
+
+  test('finish after just Kata (no more) → success', async ({ page }) => {
+    await page.getByRole('button', { name: /siguiente/i }).click();
+    await page.waitForSelector('[data-testid="modality-grid"]', { timeout: 8000 });
+
+    await page.locator('[data-testid="modality-tile-kata"]').click();
+
+    // "another?" screen — choose to finish
+    await page.locator('[data-testid="btn-finish-now"]').click();
+    await expect(page.locator('[data-testid="success-message"]')).toBeVisible({ timeout: 8000 });
+  });
+});
+
+// ── Tournament 1 = Copa Nacional Kumite (no categories) ──────────────────────
+
+test.describe('Registration Wizard — tournament WITHOUT categories', () => {
+  test.beforeEach(async ({ page }) => {
+    await injectAuth(page);
+    await page.goto('/screens/FormScreen?tournamentId=1&tournamentName=Copa%20Nacional%20Kumite%202026');
+    await page.waitForSelector('#academy-input', { timeout: 30000 });
+    await page.waitForTimeout(300);
+  });
+
+  test('should show no grade select and go straight to success on next', async ({ page }) => {
+    await expect(page.locator('#academy-input')).toBeVisible();
+    await expect(page.locator('#grade-input')).not.toBeVisible();
+
+    await page.getByRole('button', { name: /inscribirse/i }).click();
+    await expect(page.locator('[data-testid="success-message"]')).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('[data-testid="btn-volver-inicio"]')).toBeVisible();
+  });
+});
+
+// ── Auth guard ────────────────────────────────────────────────────────────────
+
+test('Form auth guard: should redirect unauthenticated users to HomeScreen', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const pg  = await ctx.newPage();
+  try {
+    await pg.goto('http://localhost:8082/screens/FormScreen');
+    await pg.waitForURL(/HomeScreen/, { timeout: 20000 });
+    await expect(pg.getByRole('button', { name: /iniciar sesión/i })).toBeVisible({ timeout: 15000 });
+  } finally {
+    await ctx.close();
+  }
 });
