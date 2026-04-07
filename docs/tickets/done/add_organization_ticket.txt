@@ -1,0 +1,43 @@
+Priority: 4
+Description: Add an organization with logo, name, acronym, description, and martial art.
+Resolved: (yes)
+State: (done)
+Criteria of success: Organization can be added successfully and displayed in the list.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/add-organizations.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Execution Plan
+
+### DB layer (database.web.ts + database.native.ts)
+- Add `Organization` interface: { id, name, acronym, description, logo (emoji), martialArtId, createdAt, synced }
+- Add storage key `db:organizations` to KEYS
+- Add: `createOrganization`, `getAllOrganizations`, `updateOrganization`, `deleteOrganization`
+- Mirror in database.native.ts with Realm schema
+
+### Screen (app/screens/OrganizationsScreen.tsx)
+- Admin-only via usePermission('manage_organizations')
+- Loads all martial arts to populate the martialArt select dropdown
+- Add form: logo emoji, name, acronym, description (textarea), martialArt select
+- List: card per org showing logo, name, acronym chip, description, linked martial art name
+- Inline edit, inline delete, empty state
+- All styles via KumiteTheme tokens
+
+### Playwright test (e2e/add-organizations.spec.ts)
+- Inject admin + seed martial art
+- Navigate to /screens/OrganizationsScreen
+- Add org → verify in list with name, acronym, martial art
+- Edit name → verify
+- Delete → empty state
+- Athlete redirected away
+
+## Comments
+- Sidebar already wired: sidebar-organizations → /screens/OrganizationsScreen
+
+## Review Notes
+- OrganizationsScreen consistent with MartialArtsScreen/RankSystemsScreen: usePermission('manage_organizations'), useAuthGuard, KumiteTheme tokens, inline add/edit/delete pattern
+- renderForm helper avoids JSX duplication between add and edit forms (same pattern as RankSystemsScreen renderFormFields)
+- DB layer: createOrganization/getAllOrganizations/updateOrganization/deleteOrganization added to both database.web.ts and database.native.ts with matching Realm schema
+- Playwright test 2/2 passing (add→verify name/acronym/art, edit→verify, delete→empty state, athlete redirect)
+- No hardcoded role checks — all via usePermission hook

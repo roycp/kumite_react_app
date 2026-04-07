@@ -1,0 +1,9 @@
+Priority: 18
+Description: Refactor the application to utilize the new role system managed through the role administrator page, replacing the previous hardcoded role systems.
+Resolved: (no)
+State: (waiting)
+Criteria of success: Application fully leverages the new role administrator system, enhancing maintainability and adaptability.
+Plan generated: (no)
+Playwright test created: (no)
+Playwright test is passing: (no)
+Unit test created: (no)

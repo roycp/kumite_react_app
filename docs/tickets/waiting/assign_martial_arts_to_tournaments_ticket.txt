@@ -1,4 +1,4 @@
-Priority: 6
+Priority: 8
 Description: Assign martial arts to each tournament so that each tournament has one or more associated martial arts.
 Resolved: (no)
 State: (waiting)

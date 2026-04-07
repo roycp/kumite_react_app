@@ -1,4 +1,4 @@
-Priority: 9
+Priority: 10
 Description: Replace the registration system to use values from the organization and martial arts modules.
 Resolved: (no)
 State: (waiting)

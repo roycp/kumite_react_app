@@ -1,0 +1,9 @@
+Priority: 17
+Description: Create a role administrator page to manage roles and assign permissions to them.
+Resolved: (no)
+State: (waiting)
+Criteria of success: Page allows creation and editing of roles, and assignment of predefined permissions, enhancing flexibility in user access management.
+Plan generated: (no)
+Playwright test created: (no)
+Playwright test is passing: (no)
+Unit test created: (no)

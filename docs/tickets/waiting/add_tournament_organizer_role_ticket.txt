@@ -1,0 +1,9 @@
+Priority: 16
+Description: Add a new administration role called 'Tournament Organizer'.
+Resolved: (no)
+State: (waiting)
+Criteria of success: The 'Tournament Organizer' role is added with appropriate permissions to manage tournaments effectively.
+Plan generated: (no)
+Playwright test created: (no)
+Playwright test is passing: (no)
+Unit test created: (no)

@@ -1,0 +1,9 @@
+Priority: 19
+Description: Implement a user authentication system similar to Devise to create user accounts and safely persist passwords.
+Resolved: (no)
+State: (waiting)
+Criteria of success: Users can register, log in, and have their passwords securely stored, similar to Devise functionality in Rails.
+Plan generated: (no)
+Playwright test created: (no)
+Playwright test is passing: (no)
+Unit test created: (no)

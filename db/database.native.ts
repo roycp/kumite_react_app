@@ -58,6 +58,17 @@ export interface RankSystem {
   synced: boolean;
 }
 
+export interface Organization {
+  id: string;
+  name: string;
+  acronym: string;
+  description: string;
+  logo: string;
+  martialArtId: string;
+  createdAt: string;
+  synced: boolean;
+}
+
 export interface CoachAssignment {
   id: string;
   coachId: string;
@@ -95,6 +106,15 @@ const CoachAssignmentSchema: Realm.ObjectSchema = {
   },
 };
 
+const OrganizationSchema: Realm.ObjectSchema = {
+  name: 'Organization', primaryKey: 'id',
+  properties: {
+    id: 'string', name: 'string', acronym: 'string', description: 'string',
+    logo: 'string', martialArtId: 'string', createdAt: 'string',
+    synced: { type: 'bool', default: false },
+  },
+};
+
 const RankSystemSchema: Realm.ObjectSchema = {
   name: 'RankSystem', primaryKey: 'id',
   properties: {
@@ -124,7 +144,7 @@ let _realm: Realm | null = null;
 async function getRealm(): Promise<Realm> {
   if (_realm && !_realm.isClosed) return _realm;
   _realm = await Realm.open({
-    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, RankSystemSchema, MartialArtSchema, SessionSchema],
+    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, OrganizationSchema, RankSystemSchema, MartialArtSchema, SessionSchema],
     schemaVersion: 1,
   });
   return _realm;
@@ -305,6 +325,34 @@ export async function updateRankSystem(id: string, updates: Partial<Omit<RankSys
 export async function deleteRankSystem(id: string): Promise<void> {
   const realm = await getRealm();
   const obj = realm.objectForPrimaryKey('RankSystem', id);
+  if (obj) realm.write(() => { realm.delete(obj); });
+}
+
+// ── Organizations ─────────────────────────────────────────────────────────────
+
+export async function createOrganization(data: Omit<Organization, 'id' | 'createdAt' | 'synced'>): Promise<Organization> {
+  const realm = await getRealm();
+  let o!: any;
+  realm.write(() => {
+    o = realm.create('Organization', { ...data, id: generateId(), createdAt: new Date().toISOString(), synced: false });
+  });
+  return toPlain<Organization>(o);
+}
+
+export async function getAllOrganizations(): Promise<Organization[]> {
+  const realm = await getRealm();
+  return Array.from(realm.objects('Organization')).map((o: any) => toPlain<Organization>(o));
+}
+
+export async function updateOrganization(id: string, updates: Partial<Omit<Organization, 'id' | 'createdAt' | 'synced'>>): Promise<void> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('Organization', id);
+  if (obj) realm.write(() => { Object.assign(obj, updates); });
+}
+
+export async function deleteOrganization(id: string): Promise<void> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('Organization', id);
   if (obj) realm.write(() => { realm.delete(obj); });
 }
 

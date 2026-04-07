@@ -1,4 +1,4 @@
-Priority: 8
+Priority: 9
 Description: Create an administrator tournament template to facilitate creating tournaments based on predefined structures.
 Resolved: (no)
 State: (waiting)

@@ -22,6 +22,6 @@ export default defineConfig({
     command: 'npx expo start --web --port 8082',
     url: 'http://localhost:8082',
     reuseExistingServer: true,
-    timeout: 120000,
+    timeout: 300000,
   },
 });

@@ -66,6 +66,17 @@ export interface RankSystem {
   synced: boolean;
 }
 
+export interface Organization {
+  id: string;
+  name: string;
+  acronym: string;
+  description: string;
+  logo: string;         // emoji or short text
+  martialArtId: string;
+  createdAt: string;
+  synced: boolean;
+}
+
 export interface CoachAssignment {
   id: string;
   coachId: string;
@@ -82,6 +93,7 @@ const KEYS = {
   ASSIGNMENTS:   'db:coach_assignments',
   MARTIAL_ARTS:  'db:martial_arts',
   RANK_SYSTEMS:  'db:rank_systems',
+  ORGANIZATIONS: 'db:organizations',
   SESSION:       'db:session_user_id',
 };
 
@@ -256,6 +268,31 @@ export async function updateRankSystem(id: string, updates: Partial<Omit<RankSys
 export async function deleteRankSystem(id: string): Promise<void> {
   const ranks = await readCollection<RankSystem>(KEYS.RANK_SYSTEMS);
   await writeCollection(KEYS.RANK_SYSTEMS, ranks.filter(r => r.id !== id));
+}
+
+// ── Organizations ─────────────────────────────────────────────────────────────
+
+export async function createOrganization(data: Omit<Organization, 'id' | 'createdAt' | 'synced'>): Promise<Organization> {
+  const orgs = await readCollection<Organization>(KEYS.ORGANIZATIONS);
+  const org: Organization = { ...data, id: generateId(), createdAt: new Date().toISOString(), synced: false };
+  orgs.push(org);
+  await writeCollection(KEYS.ORGANIZATIONS, orgs);
+  return org;
+}
+
+export async function getAllOrganizations(): Promise<Organization[]> {
+  return readCollection<Organization>(KEYS.ORGANIZATIONS);
+}
+
+export async function updateOrganization(id: string, updates: Partial<Omit<Organization, 'id' | 'createdAt' | 'synced'>>): Promise<void> {
+  const orgs = await readCollection<Organization>(KEYS.ORGANIZATIONS);
+  const idx = orgs.findIndex(o => o.id === id);
+  if (idx !== -1) { orgs[idx] = { ...orgs[idx], ...updates }; await writeCollection(KEYS.ORGANIZATIONS, orgs); }
+}
+
+export async function deleteOrganization(id: string): Promise<void> {
+  const orgs = await readCollection<Organization>(KEYS.ORGANIZATIONS);
+  await writeCollection(KEYS.ORGANIZATIONS, orgs.filter(o => o.id !== id));
 }
 
 // ── Manager assignments ───────────────────────────────────────────────────────
