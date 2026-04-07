@@ -200,6 +200,7 @@ export default function MartialArtsScreen() {
                       <div style={s.artLogo} data-testid={`art-logo-${art.id}`}>{art.logo}</div>
                       <div style={s.artName} data-testid={`art-name-${art.id}`}>{art.name}</div>
                       <div style={s.btnRow}>
+                        <button style={s.editBtn}   onClick={() => router.push(`/screens/RankSystemsScreen?martialArtId=${art.id}&martialArtName=${encodeURIComponent(art.name)}` as any)} data-testid={`btn-ranks-${art.id}`}>Rangos</button>
                         <button style={s.editBtn}   onClick={() => startEdit(art)} data-testid={`btn-edit-${art.id}`}>Editar</button>
                         <button style={s.deleteBtn} onClick={() => handleDelete(art.id)} data-testid={`btn-delete-${art.id}`}>Eliminar</button>
                       </div>

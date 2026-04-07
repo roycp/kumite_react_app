@@ -46,6 +46,18 @@ export interface MartialArt {
   synced: boolean;
 }
 
+export interface RankSystem {
+  id: string;
+  martialArtId: string;
+  name: string;
+  description: string;
+  rank: number;
+  classification: 'beginner' | 'advanced';
+  applicableTo: 'children' | 'adults' | 'both';
+  createdAt: string;
+  synced: boolean;
+}
+
 export interface CoachAssignment {
   id: string;
   coachId: string;
@@ -83,6 +95,15 @@ const CoachAssignmentSchema: Realm.ObjectSchema = {
   },
 };
 
+const RankSystemSchema: Realm.ObjectSchema = {
+  name: 'RankSystem', primaryKey: 'id',
+  properties: {
+    id: 'string', martialArtId: 'string', name: 'string', description: 'string',
+    rank: 'int', classification: 'string', applicableTo: 'string',
+    createdAt: 'string', synced: { type: 'bool', default: false },
+  },
+};
+
 const MartialArtSchema: Realm.ObjectSchema = {
   name: 'MartialArt', primaryKey: 'id',
   properties: {
@@ -103,7 +124,7 @@ let _realm: Realm | null = null;
 async function getRealm(): Promise<Realm> {
   if (_realm && !_realm.isClosed) return _realm;
   _realm = await Realm.open({
-    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, MartialArtSchema, SessionSchema],
+    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, RankSystemSchema, MartialArtSchema, SessionSchema],
     schemaVersion: 1,
   });
   return _realm;
@@ -254,6 +275,36 @@ export async function updateMartialArt(id: string, updates: Partial<Pick<Martial
 export async function deleteMartialArt(id: string): Promise<void> {
   const realm = await getRealm();
   const obj = realm.objectForPrimaryKey('MartialArt', id);
+  if (obj) realm.write(() => { realm.delete(obj); });
+}
+
+// ── Rank Systems ──────────────────────────────────────────────────────────────
+
+export async function createRankSystem(data: Omit<RankSystem, 'id' | 'createdAt' | 'synced'>): Promise<RankSystem> {
+  const realm = await getRealm();
+  let r!: any;
+  realm.write(() => {
+    r = realm.create('RankSystem', { ...data, id: generateId(), createdAt: new Date().toISOString(), synced: false });
+  });
+  return toPlain<RankSystem>(r);
+}
+
+export async function getRankSystemsByMartialArtId(martialArtId: string): Promise<RankSystem[]> {
+  const realm = await getRealm();
+  return Array.from(realm.objects('RankSystem').filtered('martialArtId == $0', martialArtId))
+    .map((r: any) => toPlain<RankSystem>(r))
+    .sort((a, b) => a.rank - b.rank);
+}
+
+export async function updateRankSystem(id: string, updates: Partial<Omit<RankSystem, 'id' | 'martialArtId' | 'createdAt' | 'synced'>>): Promise<void> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('RankSystem', id);
+  if (obj) realm.write(() => { Object.assign(obj, updates); });
+}
+
+export async function deleteRankSystem(id: string): Promise<void> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('RankSystem', id);
   if (obj) realm.write(() => { realm.delete(obj); });
 }
 

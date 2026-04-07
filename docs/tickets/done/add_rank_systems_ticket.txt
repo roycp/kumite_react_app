@@ -1,0 +1,55 @@
+Priority: 3
+Description: Add rank systems for each martial art with default belts.
+Resolved: (yes)
+State: (done)
+Criteria of success: Rank systems are added successfully and can be managed distinctly for children and adults.
+Plan generated: (yes)
+Playwright test created: (yes) — e2e/add-rank-systems.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+Each rank system includes:
+- Rank name
+- Description
+- Rank (order number)
+- Classification (beginner or advanced)
+- Applicable to children or adults
+
+## Execution Plan
+
+### DB layer (database.web.ts + database.native.ts)
+- Add `RankSystem` interface: { id, martialArtId, name, description, rank (number), classification ('beginner'|'advanced'), applicableTo ('children'|'adults'|'both'), createdAt, synced }
+- Add storage key `db:rank_systems` to KEYS
+- Add: `createRankSystem`, `getRankSystemsByMartialArtId`, `updateRankSystem`, `deleteRankSystem`
+- Mirror in database.native.ts with Realm schema
+
+### Screen (app/screens/RankSystemsScreen.tsx)
+- Admin-only via usePermission('manage_rank_systems')
+- Reads `martialArtId` + `martialArtName` from URL params
+- Add form: name, description, rank (number), classification select, applicableTo select
+- List sorted by rank number — card per entry with badge chips for classification + applicableTo
+- Inline edit, inline delete
+- Empty state
+- All styles via KumiteTheme tokens
+
+### Navigation
+- Added "Rangos" button to each art card in MartialArtsScreen
+- Navigates to /screens/RankSystemsScreen?martialArtId=...&martialArtName=...
+
+### Playwright test (e2e/add-rank-systems.spec.ts)
+- Inject admin + seed martial art in localStorage
+- Navigate to RankSystemsScreen?martialArtId=...
+- Add a rank → verify in list with chips
+- Edit its name → verify updated
+- Delete it → empty state
+- Athlete redirected away
+
+## Comments
+- applicableTo 'both' covers ranks that apply to all age groups
+
+## Review Notes
+- usePermission('manage_rank_systems') used — no hard-coded role checks
+- All styles via KumiteTheme tokens — no hard-coded values
+- DB pattern consistent: readCollection/writeCollection in web, Realm in native
+- renderFormFields helper avoids duplicating add/edit form JSX
+- 2 tests pass on first run

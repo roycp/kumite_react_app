@@ -54,6 +54,18 @@ export interface MartialArt {
   synced: boolean;
 }
 
+export interface RankSystem {
+  id: string;
+  martialArtId: string;
+  name: string;               // e.g. '10° Kyu', '1° Dan'
+  description: string;        // e.g. 'White belt'
+  rank: number;               // sort order — lower = beginner
+  classification: 'beginner' | 'advanced';
+  applicableTo: 'children' | 'adults' | 'both';
+  createdAt: string;
+  synced: boolean;
+}
+
 export interface CoachAssignment {
   id: string;
   coachId: string;
@@ -69,6 +81,7 @@ const KEYS = {
   REGISTRATIONS: 'db:registrations',
   ASSIGNMENTS:   'db:coach_assignments',
   MARTIAL_ARTS:  'db:martial_arts',
+  RANK_SYSTEMS:  'db:rank_systems',
   SESSION:       'db:session_user_id',
 };
 
@@ -217,6 +230,32 @@ export async function updateMartialArt(id: string, updates: Partial<Pick<Martial
 export async function deleteMartialArt(id: string): Promise<void> {
   const arts = await readCollection<MartialArt>(KEYS.MARTIAL_ARTS);
   await writeCollection(KEYS.MARTIAL_ARTS, arts.filter(a => a.id !== id));
+}
+
+// ── Rank Systems ──────────────────────────────────────────────────────────────
+
+export async function createRankSystem(data: Omit<RankSystem, 'id' | 'createdAt' | 'synced'>): Promise<RankSystem> {
+  const ranks = await readCollection<RankSystem>(KEYS.RANK_SYSTEMS);
+  const rank: RankSystem = { ...data, id: generateId(), createdAt: new Date().toISOString(), synced: false };
+  ranks.push(rank);
+  await writeCollection(KEYS.RANK_SYSTEMS, ranks);
+  return rank;
+}
+
+export async function getRankSystemsByMartialArtId(martialArtId: string): Promise<RankSystem[]> {
+  const ranks = await readCollection<RankSystem>(KEYS.RANK_SYSTEMS);
+  return ranks.filter(r => r.martialArtId === martialArtId).sort((a, b) => a.rank - b.rank);
+}
+
+export async function updateRankSystem(id: string, updates: Partial<Omit<RankSystem, 'id' | 'martialArtId' | 'createdAt' | 'synced'>>): Promise<void> {
+  const ranks = await readCollection<RankSystem>(KEYS.RANK_SYSTEMS);
+  const idx = ranks.findIndex(r => r.id === id);
+  if (idx !== -1) { ranks[idx] = { ...ranks[idx], ...updates }; await writeCollection(KEYS.RANK_SYSTEMS, ranks); }
+}
+
+export async function deleteRankSystem(id: string): Promise<void> {
+  const ranks = await readCollection<RankSystem>(KEYS.RANK_SYSTEMS);
+  await writeCollection(KEYS.RANK_SYSTEMS, ranks.filter(r => r.id !== id));
 }
 
 // ── Manager assignments ───────────────────────────────────────────────────────
