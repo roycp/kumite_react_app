@@ -145,6 +145,10 @@ export async function getUserById(id: string): Promise<User | null> {
   return users.find(u => u.id === id) ?? null;
 }
 
+export async function getAllUsers(): Promise<User[]> {
+  return readCollection<User>(KEYS.USERS);
+}
+
 export async function getAllAthletes(): Promise<User[]> {
   const users = await readCollection<User>(KEYS.USERS);
   return users.filter(u => u.role === 'athlete');

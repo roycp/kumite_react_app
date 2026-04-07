@@ -1,9 +1,0 @@
-Priority: 6
-Description: Create a user administrator page with table view to manage application users.
-Resolved: (no)
-State: (waiting)
-Criteria of success: Page allows viewing and editing user roles, displaying user names, emails, and roles, without altering permissions associated with roles.
-Plan generated: (no)
-Playwright test created: (no)
-Playwright test is passing: (no)
-Unit test created: (no)

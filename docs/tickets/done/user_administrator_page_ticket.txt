@@ -1,0 +1,43 @@
+Priority: 6
+Description: Create a user administrator page with table view to manage application users.
+Resolved: (yes)
+State: (done)
+Criteria of success: Page allows viewing and editing user roles, displaying user names, emails, and roles, without altering permissions associated with roles.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/user-administrator-page.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Execution Plan
+
+### Screen (app/screens/UsersScreen.tsx)
+- Admin-only via usePermission('manage_users') + redirect
+- Load all users from DB.getAllUsers() (need to add this function)
+- Table/list view showing: fullName, email, role badge (athlete=blue, manager=orange, admin=purple)
+- Inline role editor: clicking "Editar" shows a role select dropdown (athlete/manager/admin)
+- Save calls DB.updateUser(id, { role }) — does NOT change permissions (permissions are derived from role via ROLE_PERMISSIONS map)
+- Empty state if no users
+- All styles via KumiteTheme tokens
+- Sidebar already wired: sidebar-users → /screens/UsersScreen
+
+### DB layer
+- Add getAllUsers() to database.web.ts and database.native.ts (returns all users regardless of role)
+
+### Playwright test (e2e/user-administrator-page.spec.ts)
+- Inject admin + 2 seed users (one athlete, one manager)
+- Navigate to /screens/UsersScreen
+- Verify both users displayed with name, email, role badges
+- Edit athlete's role to manager → verify badge updates
+- Athlete redirected away
+
+## Comments
+- permissions.ts UserRole = 'athlete' | 'manager' | 'admin' — role select must only offer these 3 values
+- updateUser already exists in both DB files, just needs { role } update
+- Sidebar wired to /screens/UsersScreen already
+
+## Review Notes
+- UsersScreen consistent with other admin screens: usePermission('manage_users'), useAuthGuard, KumiteTheme tokens
+- getAllUsers() added to both database.web.ts and database.native.ts
+- Role badge colors defined as ROLE_COLORS constant (not inline) for clarity
+- updateUser() reused directly — no new DB functions needed
+- Playwright 2/2 passing: list view with all users + role badges, edit role, athlete redirect

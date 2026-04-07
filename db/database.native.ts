@@ -192,6 +192,11 @@ export async function getUserById(id: string): Promise<User | null> {
   return obj ? toPlain<User>(obj) : null;
 }
 
+export async function getAllUsers(): Promise<User[]> {
+  const realm = await getRealm();
+  return Array.from(realm.objects('User')).map((u: any) => toPlain<User>(u));
+}
+
 export async function getAllAthletes(): Promise<User[]> {
   const realm = await getRealm();
   return Array.from(realm.objects('User').filtered('role == "athlete"')).map((u: any) => toPlain<User>(u));
