@@ -29,7 +29,7 @@ const STATUS_COLORS: Record<TStatus, { bg: string; text: string }> = {
   cancelled: { bg: T.colors.errorLight, text: T.colors.error },
 };
 
-const EMPTY_FORM = { logo: '🏆', name: '', date: '', location: '', description: '', status: 'upcoming' as TStatus };
+const EMPTY_FORM = { logo: '🏆', name: '', date: '', location: '', description: '', status: 'upcoming' as TStatus, martialArtIds: [] as string[] };
 type FormState = typeof EMPTY_FORM;
 
 const s = {
@@ -66,6 +66,10 @@ const s = {
   editBtn:    { padding: '5px 14px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
   deleteBtn:  { padding: '5px 14px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
 
+  artBadges:  { display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 8 },
+  artBadge:   { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: T.colors.borderLight, borderRadius: T.radius.pill, fontSize: T.font.size.sm, color: T.colors.textSub },
+  checkRow:   { display: 'flex', flexWrap: 'wrap' as const, gap: 10, marginTop: 4 },
+  checkLabel: { display: 'flex', alignItems: 'center', gap: 6, fontSize: T.font.size.base, color: T.colors.text, cursor: 'pointer' },
   listTitle:  { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
   empty:      { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
   emptyIcon:  { fontSize: 52, display: 'block', marginBottom: 14 },
@@ -79,6 +83,7 @@ export default function AdminTournamentsScreen() {
   const canManage = usePermission('manage_tournaments');
 
   const [tournaments, setTournaments] = useState<DB.Tournament[]>([]);
+  const [arts, setArts]               = useState<DB.MartialArt[]>([]);
   const [loadingData, setLoading]     = useState(true);
   const [form, setForm]               = useState<FormState>(EMPTY_FORM);
   const [editId, setEditId]           = useState<string | null>(null);
@@ -90,13 +95,22 @@ export default function AdminTournamentsScreen() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    setTournaments(await DB.getAllTournaments());
+    const [ts, as] = await Promise.all([DB.getAllTournaments(), DB.getAllMartialArts()]);
+    setTournaments(ts);
+    setArts(as);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   const val = (e: any) => (e.target as HTMLInputElement).value;
+
+  const toggleArt = (f: FormState, set: (f: FormState) => void, artId: string) => {
+    const ids = f.martialArtIds.includes(artId)
+      ? f.martialArtIds.filter(id => id !== artId)
+      : [...f.martialArtIds, artId];
+    set({ ...f, martialArtIds: ids });
+  };
 
   const renderForm = (f: FormState, set: (f: FormState) => void, prefix: string) => (
     <div style={s.formGrid}>
@@ -129,6 +143,24 @@ export default function AdminTournamentsScreen() {
           <option value="cancelled">Cancelado</option>
         </select>
       </div>
+      {arts.length > 0 && (
+        <div style={{ ...s.inputWrap, gridColumn: 'span 4' } as any}>
+          <label style={s.label}>Artes Marciales</label>
+          <div style={s.checkRow}>
+            {arts.map(a => (
+              <label key={a.id} style={s.checkLabel}>
+                <input
+                  type="checkbox"
+                  checked={f.martialArtIds.includes(a.id)}
+                  onChange={() => toggleArt(f, set, a.id)}
+                  data-testid={`${prefix}-art-${a.id}`}
+                />
+                {a.logo} {a.name}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -141,6 +173,7 @@ export default function AdminTournamentsScreen() {
       location: form.location.trim(),
       description: form.description.trim(),
       status: form.status,
+      martialArtIds: form.martialArtIds,
     });
     setForm(EMPTY_FORM);
     load();
@@ -148,7 +181,7 @@ export default function AdminTournamentsScreen() {
 
   const startEdit = (t: DB.Tournament) => {
     setEditId(t.id);
-    setEditForm({ logo: t.logo, name: t.name, date: t.date, location: t.location, description: t.description, status: t.status });
+    setEditForm({ logo: t.logo, name: t.name, date: t.date, location: t.location, description: t.description, status: t.status, martialArtIds: t.martialArtIds ?? [] });
   };
 
   const handleEditSave = async () => {
@@ -160,6 +193,7 @@ export default function AdminTournamentsScreen() {
       location: editForm.location.trim(),
       description: editForm.description.trim(),
       status: editForm.status,
+      martialArtIds: editForm.martialArtIds,
     });
     setEditId(null);
     load();
@@ -221,6 +255,16 @@ export default function AdminTournamentsScreen() {
                         </div>
                       </div>
                       {t.description && <div style={s.tDesc} data-testid={`tournament-desc-${t.id}`}>{t.description}</div>}
+                      {t.martialArtIds && t.martialArtIds.length > 0 && (
+                        <div style={s.artBadges} data-testid={`tournament-arts-${t.id}`}>
+                          {t.martialArtIds.map(artId => {
+                            const art = arts.find(a => a.id === artId);
+                            return art ? (
+                              <span key={artId} style={s.artBadge} data-testid={`tournament-art-badge-${artId}`}>{art.logo} {art.name}</span>
+                            ) : null;
+                          })}
+                        </div>
+                      )}
                       <div style={s.statusBadge(t.status)} data-testid={`tournament-status-${t.id}`}>{STATUS_LABELS[t.status]}</div>
                       <div style={s.btnRow}>
                         <button style={s.editBtn}   onClick={() => startEdit(t)} data-testid={`btn-edit-${t.id}`}>Editar</button>

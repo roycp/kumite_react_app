@@ -93,6 +93,7 @@ export interface Tournament {
   logo: string;
   description: string;
   status: 'upcoming' | 'active' | 'closed' | 'cancelled';
+  martialArtIds: string[];
   createdAt: string;
   synced: boolean;
 }

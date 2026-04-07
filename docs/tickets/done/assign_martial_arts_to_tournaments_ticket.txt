@@ -1,0 +1,37 @@
+Priority: 8
+Description: Assign martial arts to each tournament so that each tournament has one or more associated martial arts.
+Resolved: (yes)
+State: (done)
+Criteria of success: Tournaments can have designated martial arts and the associations are displayed correctly.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/assign-martial-arts-tournaments.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Execution Plan
+
+### DB layer
+- Add `martialArtIds: string[]` to Tournament interface in both DB files
+- Update AdminTournamentsScreen to pass martialArtIds when creating/updating
+- In database.native.ts: store as comma-separated string field `martialArtIdsStr`; surface as `martialArtIds: string[]`
+
+### AdminTournamentsScreen changes
+- Load getAllMartialArts() alongside tournaments
+- Add checkboxes for each available martial art in the renderForm helper
+- Display martial art logos/names as small badges on each tournament card
+
+### Playwright test (e2e/assign-martial-arts-tournaments.spec.ts)
+- Inject admin + seed martial art + empty tournaments
+- Add tournament with martial art checkbox checked → verify badge shown on card
+- Edit tournament to uncheck/change → verify badge updates
+
+## Comments
+- martialArtIds defaults to [] when no martial arts are assigned
+- Checkbox IDs: `${prefix}-art-${art.id}` for test targeting
+
+## Review Notes
+- Tournament.martialArtIds: string[] added to both DB files; Realm stores as comma-string field
+- AdminTournamentsScreen loads getAllMartialArts() in parallel with tournaments
+- Checkbox multi-select in renderForm; art badges on card display
+- Playwright 1/1 passing: add with art, edit to remove art, badges update correctly
+- Server management fix: let Playwright's webServer config handle startup (kill stale :8082 first)

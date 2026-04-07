@@ -1,9 +1,0 @@
-Priority: 8
-Description: Assign martial arts to each tournament so that each tournament has one or more associated martial arts.
-Resolved: (no)
-State: (waiting)
-Criteria of success: Tournaments can have designated martial arts and the associations are displayed correctly.
-Plan generated: (no)
-Playwright test created: (no)
-Playwright test is passing: (no)
-Unit test created: (no)
