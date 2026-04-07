@@ -85,6 +85,18 @@ export interface CoachAssignment {
   synced: boolean;
 }
 
+export interface Tournament {
+  id: string;
+  name: string;
+  date: string;
+  location: string;
+  logo: string;
+  description: string;
+  status: 'upcoming' | 'active' | 'closed' | 'cancelled';
+  createdAt: string;
+  synced: boolean;
+}
+
 export interface UserMartialArtRank {
   id: string;
   userId: string;
@@ -103,6 +115,7 @@ const KEYS = {
   MARTIAL_ARTS:  'db:martial_arts',
   RANK_SYSTEMS:  'db:rank_systems',
   ORGANIZATIONS: 'db:organizations',
+  TOURNAMENTS:   'db:tournaments',
   USER_RANKS:    'db:user_martial_art_ranks',
   SESSION:       'db:session_user_id',
 };
@@ -307,6 +320,36 @@ export async function updateOrganization(id: string, updates: Partial<Omit<Organ
 export async function deleteOrganization(id: string): Promise<void> {
   const orgs = await readCollection<Organization>(KEYS.ORGANIZATIONS);
   await writeCollection(KEYS.ORGANIZATIONS, orgs.filter(o => o.id !== id));
+}
+
+// ── Tournaments ───────────────────────────────────────────────────────────────
+
+export async function createTournament(data: Omit<Tournament, 'id' | 'createdAt' | 'synced'>): Promise<Tournament> {
+  const tournaments = await readCollection<Tournament>(KEYS.TOURNAMENTS);
+  const tournament: Tournament = { ...data, id: generateId(), createdAt: new Date().toISOString(), synced: false };
+  tournaments.push(tournament);
+  await writeCollection(KEYS.TOURNAMENTS, tournaments);
+  return tournament;
+}
+
+export async function getAllTournaments(): Promise<Tournament[]> {
+  return readCollection<Tournament>(KEYS.TOURNAMENTS);
+}
+
+export async function getTournamentById(id: string): Promise<Tournament | null> {
+  const tournaments = await readCollection<Tournament>(KEYS.TOURNAMENTS);
+  return tournaments.find(t => t.id === id) ?? null;
+}
+
+export async function updateTournament(id: string, updates: Partial<Omit<Tournament, 'id' | 'createdAt' | 'synced'>>): Promise<void> {
+  const tournaments = await readCollection<Tournament>(KEYS.TOURNAMENTS);
+  const idx = tournaments.findIndex(t => t.id === id);
+  if (idx !== -1) { tournaments[idx] = { ...tournaments[idx], ...updates }; await writeCollection(KEYS.TOURNAMENTS, tournaments); }
+}
+
+export async function deleteTournament(id: string): Promise<void> {
+  const tournaments = await readCollection<Tournament>(KEYS.TOURNAMENTS);
+  await writeCollection(KEYS.TOURNAMENTS, tournaments.filter(t => t.id !== id));
 }
 
 // ── User Martial Art Ranks ────────────────────────────────────────────────────

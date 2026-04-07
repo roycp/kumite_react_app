@@ -1,0 +1,44 @@
+Priority: 7
+Description: Build a page to add and edit tournaments.
+Resolved: (yes)
+State: (done)
+Criteria of success: Users can add and edit tournament details using the new page.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/admin-tournaments.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Execution Plan
+
+### DB layer (database.web.ts + database.native.ts)
+- Add `Tournament` interface: { id, name, date, location, logo, description, status: 'upcoming'|'active'|'closed'|'cancelled', createdAt, synced }
+- Add storage key `db:tournaments`
+- Add: `createTournament`, `getAllTournaments`, `getTournamentById`, `updateTournament`, `deleteTournament`
+- Mirror in database.native.ts with Realm schema
+
+### Screen (app/screens/AdminTournamentsScreen.tsx)
+- Admin-only via usePermission('manage_tournaments')
+- Add form: logo emoji, name, date (date input), location, description (textarea), status select
+- List: cards showing logo, name, date, location, status badge, edit/delete buttons
+- Inline edit, inline delete, empty state
+- All styles via KumiteTheme
+
+### Playwright test (e2e/admin-tournaments.spec.ts)
+- Inject admin user
+- Navigate to /screens/AdminTournamentsScreen
+- Add tournament → verify in list with name, date, location
+- Edit name → verify
+- Delete → empty state
+- Athlete redirected away
+
+## Comments
+- Sidebar already wired: sidebar-admin-tournaments → /screens/AdminTournamentsScreen
+- Existing TournamentSearch uses static TOURNAMENTS data — leave those unchanged for now
+- New DB tournaments are separate from static data (ticket #9 will replace registration with DB tournaments)
+
+## Review Notes
+- AdminTournamentsScreen consistent with all other admin CRUD screens: usePermission, useAuthGuard, KumiteTheme
+- Tournament interface + CRUD added to both database.web.ts and database.native.ts
+- renderForm helper shared between add/edit (same pattern as OrganizationsScreen)
+- Status badges use STATUS_COLORS constant (not inline)
+- Playwright 2/2 passing: add, edit, delete, athlete redirect

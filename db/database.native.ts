@@ -77,6 +77,18 @@ export interface CoachAssignment {
   synced: boolean;
 }
 
+export interface Tournament {
+  id: string;
+  name: string;
+  date: string;
+  location: string;
+  logo: string;
+  description: string;
+  status: 'upcoming' | 'active' | 'closed' | 'cancelled';
+  createdAt: string;
+  synced: boolean;
+}
+
 export interface UserMartialArtRank {
   id: string;
   userId: string;
@@ -141,6 +153,15 @@ const MartialArtSchema: Realm.ObjectSchema = {
   },
 };
 
+const TournamentSchema: Realm.ObjectSchema = {
+  name: 'Tournament', primaryKey: 'id',
+  properties: {
+    id: 'string', name: 'string', date: 'string', location: 'string',
+    logo: 'string', description: 'string', status: 'string',
+    createdAt: 'string', synced: { type: 'bool', default: false },
+  },
+};
+
 const UserMartialArtRankSchema: Realm.ObjectSchema = {
   name: 'UserMartialArtRank', primaryKey: 'id',
   properties: {
@@ -161,7 +182,7 @@ let _realm: Realm | null = null;
 async function getRealm(): Promise<Realm> {
   if (_realm && !_realm.isClosed) return _realm;
   _realm = await Realm.open({
-    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, OrganizationSchema, RankSystemSchema, MartialArtSchema, UserMartialArtRankSchema, SessionSchema],
+    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, OrganizationSchema, RankSystemSchema, MartialArtSchema, UserMartialArtRankSchema, TournamentSchema, SessionSchema],
     schemaVersion: 1,
   });
   return _realm;
@@ -375,6 +396,40 @@ export async function updateOrganization(id: string, updates: Partial<Omit<Organ
 export async function deleteOrganization(id: string): Promise<void> {
   const realm = await getRealm();
   const obj = realm.objectForPrimaryKey('Organization', id);
+  if (obj) realm.write(() => { realm.delete(obj); });
+}
+
+// ── Tournaments ───────────────────────────────────────────────────────────────
+
+export async function createTournament(data: Omit<Tournament, 'id' | 'createdAt' | 'synced'>): Promise<Tournament> {
+  const realm = await getRealm();
+  let t!: any;
+  realm.write(() => {
+    t = realm.create('Tournament', { ...data, id: generateId(), createdAt: new Date().toISOString(), synced: false });
+  });
+  return toPlain<Tournament>(t);
+}
+
+export async function getAllTournaments(): Promise<Tournament[]> {
+  const realm = await getRealm();
+  return Array.from(realm.objects('Tournament')).map((t: any) => toPlain<Tournament>(t));
+}
+
+export async function getTournamentById(id: string): Promise<Tournament | null> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('Tournament', id);
+  return obj ? toPlain<Tournament>(obj) : null;
+}
+
+export async function updateTournament(id: string, updates: Partial<Omit<Tournament, 'id' | 'createdAt' | 'synced'>>): Promise<void> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('Tournament', id);
+  if (obj) realm.write(() => { Object.assign(obj, updates); });
+}
+
+export async function deleteTournament(id: string): Promise<void> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('Tournament', id);
   if (obj) realm.write(() => { realm.delete(obj); });
 }
 
