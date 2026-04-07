@@ -1,0 +1,45 @@
+Priority: 5
+Description: Add martial arts to the user profile page to allow users to specify their rank in each martial art.
+Resolved: (yes)
+State: (done)
+Criteria of success: Users can successfully add and update their martial art ranks on their profile page.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/martial-arts-profile.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Execution Plan
+
+### DB layer (database.web.ts + database.native.ts)
+- Add `UserMartialArtRank` interface: { id, userId, martialArtId, rankSystemId, createdAt, synced }
+- Add storage key `db:user_martial_art_ranks` (web) / Realm schema (native)
+- Add: `getUserMartialArtRanks(userId)` → list of user's ranks
+- Add: `upsertUserMartialArtRank(userId, martialArtId, rankSystemId)` → create or update
+- Add: `removeUserMartialArtRank(userId, martialArtId)` → remove entry
+
+### ProfileScreen changes (app/screens/ProfileScreen.tsx)
+- Add "ARTES MARCIALES" section below sports info card
+- Load: getAllMartialArts(), getUserMartialArtRanks(userId), getRankSystemsByMartialArtId for each art
+- Display: list of assigned martial arts showing logo, art name, rank name
+- Add: dropdown of unassigned arts → select art → select rank from that art's rank systems → save
+- Edit: clicking edit on a row shows rank select inline
+- Remove: delete button per row
+- Styles via KumiteTheme
+
+### Playwright test (e2e/martial-arts-profile.spec.ts)
+- Inject athlete + seed martial art + seed rank system
+- Navigate to /screens/ProfileScreen
+- Add martial art rank → verify it appears
+- Change rank → verify it updates
+- Remove → verify it's gone
+
+## Comments
+- beltGrade field stays as-is; new section is structured per-martial-art entries
+- upsertUserMartialArtRank: if row exists for (userId+martialArtId) update rankSystemId, else create
+
+## Review Notes
+- UserMartialArtRank added to both database.web.ts and database.native.ts (interface + Realm schema + CRUD)
+- ProfileScreen uses KumiteTheme tokens for new section styles
+- Martial arts section only renders if allArts.length > 0 (no clutter when no arts configured)
+- Uses useCallback + loadMartialArts for consistent reload pattern matching other screens
+- Playwright 1/1 passing: add rank, edit rank, remove rank

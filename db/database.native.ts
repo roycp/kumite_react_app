@@ -77,6 +77,15 @@ export interface CoachAssignment {
   synced: boolean;
 }
 
+export interface UserMartialArtRank {
+  id: string;
+  userId: string;
+  martialArtId: string;
+  rankSystemId: string;
+  createdAt: string;
+  synced: boolean;
+}
+
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
 const UserSchema: Realm.ObjectSchema = {
@@ -132,6 +141,14 @@ const MartialArtSchema: Realm.ObjectSchema = {
   },
 };
 
+const UserMartialArtRankSchema: Realm.ObjectSchema = {
+  name: 'UserMartialArtRank', primaryKey: 'id',
+  properties: {
+    id: 'string', userId: 'string', martialArtId: 'string', rankSystemId: 'string',
+    createdAt: 'string', synced: { type: 'bool', default: false },
+  },
+};
+
 const SessionSchema: Realm.ObjectSchema = {
   name: 'Session', primaryKey: 'key',
   properties: { key: 'string', value: 'string' },
@@ -144,7 +161,7 @@ let _realm: Realm | null = null;
 async function getRealm(): Promise<Realm> {
   if (_realm && !_realm.isClosed) return _realm;
   _realm = await Realm.open({
-    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, OrganizationSchema, RankSystemSchema, MartialArtSchema, SessionSchema],
+    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, OrganizationSchema, RankSystemSchema, MartialArtSchema, UserMartialArtRankSchema, SessionSchema],
     schemaVersion: 1,
   });
   return _realm;
@@ -359,6 +376,32 @@ export async function deleteOrganization(id: string): Promise<void> {
   const realm = await getRealm();
   const obj = realm.objectForPrimaryKey('Organization', id);
   if (obj) realm.write(() => { realm.delete(obj); });
+}
+
+// ── User Martial Art Ranks ────────────────────────────────────────────────────
+
+export async function getUserMartialArtRanks(userId: string): Promise<UserMartialArtRank[]> {
+  const realm = await getRealm();
+  return Array.from(realm.objects('UserMartialArtRank').filtered('userId == $0', userId))
+    .map((r: any) => toPlain<UserMartialArtRank>(r));
+}
+
+export async function upsertUserMartialArtRank(userId: string, martialArtId: string, rankSystemId: string): Promise<void> {
+  const realm = await getRealm();
+  const existing = realm.objects('UserMartialArtRank').filtered('userId == $0 AND martialArtId == $1', userId, martialArtId);
+  realm.write(() => {
+    if (existing.length > 0) {
+      (existing[0] as any).rankSystemId = rankSystemId;
+    } else {
+      realm.create('UserMartialArtRank', { id: generateId(), userId, martialArtId, rankSystemId, createdAt: new Date().toISOString(), synced: false });
+    }
+  });
+}
+
+export async function removeUserMartialArtRank(userId: string, martialArtId: string): Promise<void> {
+  const realm = await getRealm();
+  const results = realm.objects('UserMartialArtRank').filtered('userId == $0 AND martialArtId == $1', userId, martialArtId);
+  if (results.length > 0) realm.write(() => { realm.delete(results); });
 }
 
 // ── Manager assignments ───────────────────────────────────────────────────────

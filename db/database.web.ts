@@ -85,6 +85,15 @@ export interface CoachAssignment {
   synced: boolean;
 }
 
+export interface UserMartialArtRank {
+  id: string;
+  userId: string;
+  martialArtId: string;
+  rankSystemId: string;
+  createdAt: string;
+  synced: boolean;
+}
+
 // ── Storage keys ──────────────────────────────────────────────────────────────
 
 const KEYS = {
@@ -94,6 +103,7 @@ const KEYS = {
   MARTIAL_ARTS:  'db:martial_arts',
   RANK_SYSTEMS:  'db:rank_systems',
   ORGANIZATIONS: 'db:organizations',
+  USER_RANKS:    'db:user_martial_art_ranks',
   SESSION:       'db:session_user_id',
 };
 
@@ -297,6 +307,29 @@ export async function updateOrganization(id: string, updates: Partial<Omit<Organ
 export async function deleteOrganization(id: string): Promise<void> {
   const orgs = await readCollection<Organization>(KEYS.ORGANIZATIONS);
   await writeCollection(KEYS.ORGANIZATIONS, orgs.filter(o => o.id !== id));
+}
+
+// ── User Martial Art Ranks ────────────────────────────────────────────────────
+
+export async function getUserMartialArtRanks(userId: string): Promise<UserMartialArtRank[]> {
+  const ranks = await readCollection<UserMartialArtRank>(KEYS.USER_RANKS);
+  return ranks.filter(r => r.userId === userId);
+}
+
+export async function upsertUserMartialArtRank(userId: string, martialArtId: string, rankSystemId: string): Promise<void> {
+  const ranks = await readCollection<UserMartialArtRank>(KEYS.USER_RANKS);
+  const idx = ranks.findIndex(r => r.userId === userId && r.martialArtId === martialArtId);
+  if (idx !== -1) {
+    ranks[idx] = { ...ranks[idx], rankSystemId };
+  } else {
+    ranks.push({ id: generateId(), userId, martialArtId, rankSystemId, createdAt: new Date().toISOString(), synced: false });
+  }
+  await writeCollection(KEYS.USER_RANKS, ranks);
+}
+
+export async function removeUserMartialArtRank(userId: string, martialArtId: string): Promise<void> {
+  const ranks = await readCollection<UserMartialArtRank>(KEYS.USER_RANKS);
+  await writeCollection(KEYS.USER_RANKS, ranks.filter(r => !(r.userId === userId && r.martialArtId === martialArtId)));
 }
 
 // ── Manager assignments ───────────────────────────────────────────────────────

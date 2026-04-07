@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import * as DB from '../../db/database';
 import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
+import { KumiteTheme as T } from '../../constants/theme';
 
 export default function ProfileScreen() {
   const { currentUser, isLoading } = useAuthGuard();
@@ -15,6 +16,15 @@ export default function ProfileScreen() {
     fullName: '', country: '', age: '', gender: '',
     academy: '', weight: '', beltGrade: '',
   });
+
+  // Martial art ranks
+  const [allArts, setAllArts]         = useState<DB.MartialArt[]>([]);
+  const [userRanks, setUserRanks]     = useState<DB.UserMartialArtRank[]>([]);
+  const [artRankMap, setArtRankMap]   = useState<Record<string, DB.RankSystem[]>>({});
+  const [addArtId, setAddArtId]       = useState('');
+  const [addRankId, setAddRankId]     = useState('');
+  const [editRankArtId, setEditRankArtId] = useState<string | null>(null);
+  const [editRankId, setEditRankId]   = useState('');
 
   useEffect(() => {
     if (currentUser) {
@@ -30,9 +40,69 @@ export default function ProfileScreen() {
     }
   }, [currentUser]);
 
+  const loadMartialArts = useCallback(async () => {
+    if (!currentUser) return;
+    const [arts, ranks] = await Promise.all([
+      DB.getAllMartialArts(),
+      DB.getUserMartialArtRanks(currentUser.id),
+    ]);
+    setAllArts(arts);
+    setUserRanks(ranks);
+    // Load rank systems for arts that have user ranks
+    const artIds = [...new Set(ranks.map(r => r.martialArtId))];
+    const entries = await Promise.all(
+      artIds.map(id => DB.getRankSystemsByMartialArtId(id).then(rs => [id, rs] as [string, DB.RankSystem[]]))
+    );
+    setArtRankMap(Object.fromEntries(entries));
+  }, [currentUser]);
+
+  useEffect(() => { loadMartialArts(); }, [loadMartialArts]);
+
   if (isLoading || !currentUser) return null;
 
   const set = (k: string) => (e: any) => setForm(p => ({ ...p, [k]: e.target.value }));
+
+  // Martial art rank handlers
+  const handleAddRank = async () => {
+    if (!addArtId || !addRankId) return;
+    await DB.upsertUserMartialArtRank(currentUser.id, addArtId, addRankId);
+    setAddArtId('');
+    setAddRankId('');
+    loadMartialArts();
+  };
+
+  const startEditRank = async (artId: string, rankSystemId: string) => {
+    setEditRankArtId(artId);
+    setEditRankId(rankSystemId);
+    if (!artRankMap[artId]) {
+      const rs = await DB.getRankSystemsByMartialArtId(artId);
+      setArtRankMap(m => ({ ...m, [artId]: rs }));
+    }
+  };
+
+  const handleEditRankSave = async () => {
+    if (!editRankArtId || !editRankId) return;
+    await DB.upsertUserMartialArtRank(currentUser.id, editRankArtId, editRankId);
+    setEditRankArtId(null);
+    loadMartialArts();
+  };
+
+  const handleRemoveRank = async (artId: string) => {
+    await DB.removeUserMartialArtRank(currentUser.id, artId);
+    loadMartialArts();
+  };
+
+  const unassignedArts = allArts.filter(a => !userRanks.some(r => r.martialArtId === a.id));
+  const addArtRanks    = addArtId ? (artRankMap[addArtId] ?? []) : [];
+
+  const loadAddArtRanks = async (artId: string) => {
+    setAddArtId(artId);
+    setAddRankId('');
+    if (artId && !artRankMap[artId]) {
+      const rs = await DB.getRankSystemsByMartialArtId(artId);
+      setArtRankMap(m => ({ ...m, [artId]: rs }));
+    }
+  };
 
   const handleSave = async () => {
     setError('');
@@ -78,6 +148,18 @@ export default function ProfileScreen() {
     btnCancel:  { flex: 1, padding: '12px 0', background: 'transparent', border: '1px solid #ccc', borderRadius: 24, color: '#666', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' },
     divider:    { border: 'none', borderTop: '1px solid #f0f0f0', margin: '8px 0 16px' },
     readonlyCard: { background: '#f9f5ff', borderRadius: 14, padding: 28, boxShadow: '0 2px 10px rgba(0,0,0,0.06)', marginBottom: 20 },
+
+    // Martial arts section
+    artRow:     { display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid #f0f0f0' },
+    artLogo:    { fontSize: 22, width: 28, textAlign: 'center' as const, flexShrink: 0 },
+    artName:    { flex: 1, fontSize: 14, fontWeight: 600, color: '#1a1a2e' },
+    rankBadge:  { fontSize: 12, padding: '2px 10px', borderRadius: 12, background: T.colors.primaryLight, color: T.colors.primary, fontWeight: 600 },
+    artEditBtn: { padding: '3px 10px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: 16, color: T.colors.primary, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' },
+    artDelBtn:  { padding: '3px 10px', background: 'transparent', border: '1px solid #e0e0e0', borderRadius: 16, color: '#888', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' },
+    addRow:     { display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' as const, alignItems: 'center' },
+    smSelect:   { padding: '6px 10px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', background: '#fafafa', outline: 'none', flex: 1, minWidth: 120 },
+    smBtn:      { padding: '7px 16px', background: T.colors.primary, border: 'none', borderRadius: 16, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const },
+    emptyArts:  { fontSize: 13, color: '#aaa', padding: '8px 0', fontStyle: 'italic' as const },
   };
 
   const Field = ({ label, k, type = 'text', options }: { label: string; k: string; type?: string; options?: string[] }) => (
@@ -152,6 +234,82 @@ export default function ProfileScreen() {
                         '1° Dan', '2° Dan+']}
             />
           </div>
+
+          {/* Martial arts ranks */}
+          {allArts.length > 0 && (
+            <div className="kb-profile-card" style={s.card} data-testid="martial-arts-section">
+              <div style={s.sectionLbl}>ARTES MARCIALES</div>
+              <hr style={s.divider} />
+
+              {/* Assigned arts */}
+              {userRanks.length === 0 ? (
+                <div style={s.emptyArts} data-testid="no-arts-assigned">Sin artes marciales asignadas.</div>
+              ) : (
+                userRanks.map(ur => {
+                  const art  = allArts.find(a => a.id === ur.martialArtId);
+                  const rank = (artRankMap[ur.martialArtId] ?? []).find(r => r.id === ur.rankSystemId);
+                  return (
+                    <div key={ur.martialArtId} style={s.artRow} data-testid={`art-rank-row-${ur.martialArtId}`}>
+                      <span style={s.artLogo}>{art?.logo ?? '🥋'}</span>
+                      <span style={s.artName}>{art?.name ?? ur.martialArtId}</span>
+                      {editRankArtId === ur.martialArtId ? (
+                        <>
+                          <select
+                            style={{ ...s.smSelect, flex: 'none', width: 160 }}
+                            value={editRankId}
+                            onChange={e => setEditRankId((e.target as HTMLSelectElement).value)}
+                            data-testid="input-edit-rank"
+                          >
+                            <option value="">— Rango —</option>
+                            {(artRankMap[ur.martialArtId] ?? []).map(r => (
+                              <option key={r.id} value={r.id}>{r.name}</option>
+                            ))}
+                          </select>
+                          <button style={s.artEditBtn} onClick={handleEditRankSave} data-testid="btn-save-rank">Guardar</button>
+                          <button style={s.artDelBtn}  onClick={() => setEditRankArtId(null)} data-testid="btn-cancel-rank-edit">Cancelar</button>
+                        </>
+                      ) : (
+                        <>
+                          <span style={s.rankBadge} data-testid={`rank-badge-${ur.martialArtId}`}>{rank?.name ?? '—'}</span>
+                          <button style={s.artEditBtn} onClick={() => startEditRank(ur.martialArtId, ur.rankSystemId)} data-testid={`btn-edit-rank-${ur.martialArtId}`}>Editar</button>
+                          <button style={s.artDelBtn}  onClick={() => handleRemoveRank(ur.martialArtId)} data-testid={`btn-remove-rank-${ur.martialArtId}`}>Quitar</button>
+                        </>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+
+              {/* Add a new art */}
+              {unassignedArts.length > 0 && (
+                <div style={s.addRow} data-testid="add-art-row">
+                  <select
+                    style={s.smSelect}
+                    value={addArtId}
+                    onChange={e => loadAddArtRanks((e.target as HTMLSelectElement).value)}
+                    data-testid="select-add-art"
+                  >
+                    <option value="">— Arte marcial —</option>
+                    {unassignedArts.map(a => <option key={a.id} value={a.id}>{a.logo} {a.name}</option>)}
+                  </select>
+                  {addArtId && (
+                    <select
+                      style={s.smSelect}
+                      value={addRankId}
+                      onChange={e => setAddRankId((e.target as HTMLSelectElement).value)}
+                      data-testid="select-add-rank"
+                    >
+                      <option value="">— Rango —</option>
+                      {(artRankMap[addArtId] ?? []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </select>
+                  )}
+                  <button style={s.smBtn} onClick={handleAddRank} disabled={!addArtId || !addRankId} data-testid="btn-add-art-rank">
+                    Agregar
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Readonly account info */}
           <div className="kb-profile-card" style={s.readonlyCard}>
