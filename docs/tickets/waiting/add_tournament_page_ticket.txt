@@ -1,0 +1,9 @@
+Priority: 7
+Description: Build a page to add and edit tournaments.
+Resolved: (no)
+State: (waiting)
+Criteria of success: Users can add and edit tournament details using the new page.
+Plan generated: (no)
+Playwright test created: (no)
+Playwright test is passing: (no)
+Unit test created: (no)

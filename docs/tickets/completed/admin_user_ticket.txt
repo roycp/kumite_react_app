@@ -1,0 +1,22 @@
+Priority: 1
+Description: Create an admin user role with full permissions so Playwright can test all admin-facing flows end-to-end.
+Resolved: (yes)
+State: (complete)
+Criteria of success:
+  - A new 'admin' role exists in the system alongside 'athlete' and 'manager'.
+  - Admin permissions include all athlete + manager permissions plus: manage_martial_arts, manage_organizations, manage_rank_systems, manage_tournaments, manage_users.
+  - The permissions constant, DB types, and AuthContext are updated to support the admin role.
+  - A seed/inject helper for Playwright produces a ready-to-use admin test user (no signup flow required).
+  - A Playwright smoke test logs in as admin and verifies the admin nav items are visible.
+Plan generated: (yes)
+Playwright test created: (yes) — e2e/admin-smoke.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+Comments:
+- 'admin' role added to UserRole union in constants/permissions.ts, db/database.web.ts, db/database.native.ts, context/AuthContext.tsx
+- Admin has all athlete + manager permissions plus: manage_martial_arts, manage_organizations, manage_rank_systems, manage_tournaments, manage_users
+- ADMIN_NAV added to Sidebar.tsx with placeholder routes for future admin screens (MartialArtsScreen, OrganizationsScreen, AdminTournamentsScreen, UsersScreen)
+- Admin avatar shows 🛡️, label shows 'Administrador'
+- Playwright injectAdmin helper injects user directly via localStorage — no signup flow needed
+- Smoke test verifies admin nav items visible and athlete-only items hidden

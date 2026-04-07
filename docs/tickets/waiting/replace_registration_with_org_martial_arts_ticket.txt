@@ -1,0 +1,9 @@
+Priority: 9
+Description: Replace the registration system to use values from the organization and martial arts modules.
+Resolved: (no)
+State: (waiting)
+Criteria of success: Registration system is updated to utilize the organization and martial art values effectively.
+Plan generated: (no)
+Playwright test created: (no)
+Playwright test is passing: (no)
+Unit test created: (no)

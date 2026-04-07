@@ -1,22 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../context/AuthContext';
 import { TOURNAMENTS } from '../../data/tournaments';
 import * as DB from '../../db/database';
 import Sidebar from '../../components/Sidebar';
+import { useAuthGuard } from '../../hooks/useAuthGuard';
 
 export default function TournamentSearch() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { currentUser, isLoading } = useAuth();
+  const { currentUser, isLoading } = useAuthGuard();
+  const params = useLocalSearchParams<{ athleteId?: string; athleteName?: string }>();
+
+  // When a manager navigates here from TeamManagement, these are set
+  const athleteId   = params.athleteId   ? String(params.athleteId)   : undefined;
+  const athleteName = params.athleteName ? decodeURIComponent(String(params.athleteName)) : undefined;
 
   const [registeredIds, setRegisteredIds] = useState<string[]>([]);
   const [query,         setQuery]         = useState('');
-
-  useEffect(() => {
-    if (!isLoading && !currentUser) router.replace('/screens/HomeScreen');
-  }, [currentUser, isLoading]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -28,13 +29,16 @@ export default function TournamentSearch() {
   );
 
   const goToDetail = (id: string, name: string) => {
-    router.push(`/screens/TournamentDetail?id=${id}&name=${encodeURIComponent(name)}` as any);
+    const qs = athleteId
+      ? `&athleteId=${athleteId}&athleteName=${encodeURIComponent(athleteName ?? '')}`
+      : '';
+    router.push(`/screens/TournamentDetail?id=${id}&name=${encodeURIComponent(name)}${qs}` as any);
   };
 
   if (isLoading || !currentUser) return null;
 
   const s: any = {
-    page:       { minHeight: '100vh', background: '#f5f5f5', padding: '32px 24px', fontFamily: 'Roboto, sans-serif', overflowY: 'auto' },
+    page:       { minHeight: '100%', background: '#f5f5f5', padding: '32px 24px', fontFamily: 'Roboto, sans-serif', boxSizing: 'border-box' as const },
     maxW:       { maxWidth: 900, margin: '0 auto' },
     pageTitle:  { fontSize: 26, fontWeight: 800, color: '#1a1a2e', marginBottom: 6 },
     pageSub:    { fontSize: 14, color: '#888', marginBottom: 20 },
@@ -45,7 +49,7 @@ export default function TournamentSearch() {
     // No results
     noResults:  { textAlign: 'center' as const, padding: '48px 0', color: '#aaa' },
     // Grid
-    grid:       { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 },
+    grid:       { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 },
     tile:       (disabled: boolean) => ({
       background: disabled ? '#fafafa' : '#fff',
       borderRadius: 14, padding: 20,
@@ -65,10 +69,23 @@ export default function TournamentSearch() {
 
   return (
     <Sidebar>
-      <div data-testid="tournament-search-screen" style={s.page}>
+      <style>{`
+        @media (max-width: 600px) {
+          .kb-search-page { padding: 16px 12px !important; }
+          .kb-search-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+      <div data-testid="tournament-search-screen" className="kb-search-page" style={s.page}>
         <div style={s.maxW}>
           <div style={s.pageTitle}>{t('search.title')}</div>
           <div style={s.pageSub}>{t('search.subtitle')}</div>
+
+          {/* Manager context: show who is being enrolled */}
+          {athleteId && athleteName && (
+            <div style={{ background: '#ede7f6', border: '1px solid #d6c8f5', borderRadius: 10, padding: '10px 16px', marginBottom: 20, fontSize: 14, color: '#6750a4', fontWeight: 600 }}>
+              📋 Inscribiendo a: <strong>{athleteName}</strong>
+            </div>
+          )}
 
           {/* Search bar */}
           <div style={s.searchWrap}>
@@ -87,7 +104,7 @@ export default function TournamentSearch() {
               No se encontraron torneos para "<strong>{query}</strong>"
             </div>
           ) : (
-            <div style={s.grid}>
+            <div className="kb-search-grid" style={s.grid}>
               {filtered.map(t2 => {
                 const enrolled = registeredIds.includes(t2.id);
                 return (

@@ -12,7 +12,7 @@ export interface User {
   id: string;
   email: string;
   passwordHash: string;
-  role: 'athlete' | 'coach';
+  role: 'athlete' | 'manager' | 'admin';
   fullName: string;
   country: string;
   age: string;
@@ -39,8 +39,18 @@ export interface Registration {
   tournamentName: string;
   athleteName: string;
   email?: string;             // optional — not collected in the new wizard
+  academy?: string;           // captured at registration / edit time
+  grade?: string;             // captured at registration / edit time
   modalities: ModalityEntry[];
   timestamp: string;
+  synced: boolean;
+}
+
+export interface MartialArt {
+  id: string;
+  name: string;
+  logo: string;   // emoji or short text, e.g. '🥋'
+  createdAt: string;
   synced: boolean;
 }
 
@@ -58,6 +68,7 @@ const KEYS = {
   USERS:         'db:users',
   REGISTRATIONS: 'db:registrations',
   ASSIGNMENTS:   'db:coach_assignments',
+  MARTIAL_ARTS:  'db:martial_arts',
   SESSION:       'db:session_user_id',
 };
 
@@ -112,6 +123,18 @@ export async function getUserById(id: string): Promise<User | null> {
 export async function getAllAthletes(): Promise<User[]> {
   const users = await readCollection<User>(KEYS.USERS);
   return users.filter(u => u.role === 'athlete');
+}
+
+export async function getUsersByIds(ids: string[]): Promise<User[]> {
+  if (ids.length === 0) return [];
+  const users = await readCollection<User>(KEYS.USERS);
+  return users.filter(u => ids.includes(u.id));
+}
+
+export async function getRegistrationsByAthleteIds(athleteIds: string[]): Promise<Registration[]> {
+  if (athleteIds.length === 0) return [];
+  const registrations = await readCollection<Registration>(KEYS.REGISTRATIONS);
+  return registrations.filter(r => athleteIds.includes(r.userId));
 }
 
 export async function updateUser(id: string, updates: Partial<Omit<User, 'id'>>): Promise<void> {
@@ -171,27 +194,59 @@ export async function deleteRegistration(id: string): Promise<void> {
   await writeCollection(KEYS.REGISTRATIONS, registrations.filter(r => r.id !== id));
 }
 
-// ── Coach assignments ─────────────────────────────────────────────────────────
+// ── Martial Arts ──────────────────────────────────────────────────────────────
 
-export async function assignAthleteToCoach(coachId: string, athleteId: string): Promise<void> {
+export async function createMartialArt(data: Pick<MartialArt, 'name' | 'logo'>): Promise<MartialArt> {
+  const arts = await readCollection<MartialArt>(KEYS.MARTIAL_ARTS);
+  const art: MartialArt = { ...data, id: generateId(), createdAt: new Date().toISOString(), synced: false };
+  arts.push(art);
+  await writeCollection(KEYS.MARTIAL_ARTS, arts);
+  return art;
+}
+
+export async function getAllMartialArts(): Promise<MartialArt[]> {
+  return readCollection<MartialArt>(KEYS.MARTIAL_ARTS);
+}
+
+export async function updateMartialArt(id: string, updates: Partial<Pick<MartialArt, 'name' | 'logo'>>): Promise<void> {
+  const arts = await readCollection<MartialArt>(KEYS.MARTIAL_ARTS);
+  const idx = arts.findIndex(a => a.id === id);
+  if (idx !== -1) { arts[idx] = { ...arts[idx], ...updates }; await writeCollection(KEYS.MARTIAL_ARTS, arts); }
+}
+
+export async function deleteMartialArt(id: string): Promise<void> {
+  const arts = await readCollection<MartialArt>(KEYS.MARTIAL_ARTS);
+  await writeCollection(KEYS.MARTIAL_ARTS, arts.filter(a => a.id !== id));
+}
+
+// ── Manager assignments ───────────────────────────────────────────────────────
+
+export async function assignAthleteToManager(managerId: string, athleteId: string): Promise<void> {
   const assignments = await readCollection<CoachAssignment>(KEYS.ASSIGNMENTS);
-  if (!assignments.some(a => a.coachId === coachId && a.athleteId === athleteId)) {
-    assignments.push({ id: generateId(), coachId, athleteId, createdAt: new Date().toISOString(), synced: false });
+  if (!assignments.some(a => a.coachId === managerId && a.athleteId === athleteId)) {
+    assignments.push({ id: generateId(), coachId: managerId, athleteId, createdAt: new Date().toISOString(), synced: false });
     await writeCollection(KEYS.ASSIGNMENTS, assignments);
   }
 }
 
-export async function removeAthleteFromCoach(coachId: string, athleteId: string): Promise<void> {
+export async function removeAthleteFromManager(managerId: string, athleteId: string): Promise<void> {
   const assignments = await readCollection<CoachAssignment>(KEYS.ASSIGNMENTS);
-  await writeCollection(KEYS.ASSIGNMENTS, assignments.filter(a => !(a.coachId === coachId && a.athleteId === athleteId)));
+  await writeCollection(KEYS.ASSIGNMENTS, assignments.filter(a => !(a.coachId === managerId && a.athleteId === athleteId)));
 }
 
-export async function getAthletesByCoachId(coachId: string): Promise<User[]> {
+export async function getAthletesByManagerId(managerId: string): Promise<User[]> {
   const assignments = await readCollection<CoachAssignment>(KEYS.ASSIGNMENTS);
-  const ids = assignments.filter(a => a.coachId === coachId).map(a => a.athleteId);
+  const ids = assignments.filter(a => a.coachId === managerId).map(a => a.athleteId);
   const users = await readCollection<User>(KEYS.USERS);
   return users.filter(u => ids.includes(u.id));
 }
+
+/** @deprecated Use assignAthleteToManager */
+export const assignAthleteToCoach = assignAthleteToManager;
+/** @deprecated Use removeAthleteFromManager */
+export const removeAthleteFromCoach = removeAthleteFromManager;
+/** @deprecated Use getAthletesByManagerId */
+export const getAthletesByCoachId = getAthletesByManagerId;
 
 // ── Sync helpers ──────────────────────────────────────────────────────────────
 

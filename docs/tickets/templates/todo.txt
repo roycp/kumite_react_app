@@ -1,0 +1,10 @@
+This is a todo list of elements we need to complete. You should generate an individual file for an execution plan for each one of those, a playwright automated test to ensure they work as expected, unit tests for testing the functionality, and apply the changes for all of those. Each item can have a status of 'waiting', 'in progress', or 'complete', which should guide the execution process. As soon as one of these actions is completed, you should use this document as your source of truth and mark it as resolved for any of these elements.
+
+1. Description:
+   Resolved: (no)
+   State: (waiting | in progress | complete)
+   Criteria of success:
+   Plan generated: (no)
+   Playwright test created: (no)
+   Playwright test is passing: (no)
+   Unit test created: (no)

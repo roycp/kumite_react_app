@@ -1,21 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../context/AuthContext';
 import * as DB from '../../db/database';
 import { getTournamentById } from '../../data/tournaments';
 import Sidebar from '../../components/Sidebar';
+import { useAuthGuard } from '../../hooks/useAuthGuard';
 
 export default function MainScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { currentUser, isLoading } = useAuth();
+  const { currentUser, isLoading } = useAuthGuard();
 
   const [activeRegs, setActiveRegs] = useState<DB.Registration[]>([]);
-
-  useEffect(() => {
-    if (!isLoading && !currentUser) router.replace('/screens/HomeScreen');
-  }, [currentUser, isLoading]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -37,7 +33,7 @@ export default function MainScreen() {
   if (isLoading || !currentUser) return null;
 
   const s: any = {
-    page:        { minHeight: '100vh', background: '#f0f2f5', padding: '28px 24px', fontFamily: 'Roboto, sans-serif', overflowY: 'auto' },
+    page:        { minHeight: '100%', background: '#f0f2f5', padding: '28px 24px', fontFamily: 'Roboto, sans-serif', boxSizing: 'border-box' as const },
     maxW:        { maxWidth: 900, margin: '0 auto' },
 
     // Welcome banner
@@ -49,7 +45,7 @@ export default function MainScreen() {
 
     // Quick-action tiles
     sectionTitle:{ fontSize: 14, fontWeight: 700, color: '#888', letterSpacing: 1, marginBottom: 12, textTransform: 'uppercase' as const },
-    quickGrid:   { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14, marginBottom: 32 },
+    quickGrid:   { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14, marginBottom: 32 },
     quickTile:   { background: '#fff', borderRadius: 14, padding: '20px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.07)', border: '1px solid #efefef', transition: 'all 0.18s' },
     tileIcon:    { fontSize: 28, lineHeight: 1 },
     tileText:    {},
@@ -72,30 +68,46 @@ export default function MainScreen() {
     viewAllBtn:  { marginTop: 14, width: '100%', padding: '10px 0', background: 'transparent', border: '1px solid #e0e0e0', borderRadius: 20, color: '#6750a4', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
   };
 
-  const QUICK_TILES = [
-    { icon: '🔍', title: 'Buscar Torneos',  sub: 'Encuentra competencias',    route: '/screens/TournamentSearch',  testId: 'nav-search' },
-    { icon: '📜', title: 'Mi Historial',    sub: 'Torneos registrados',       route: '/screens/TournamentHistory', testId: 'nav-history' },
-    { icon: '👤', title: 'Mi Perfil',       sub: 'Ver y editar tu info',      route: '/screens/ProfileScreen',     testId: 'nav-profile' },
+  const isManager = currentUser.role === 'manager';
+
+  const ATHLETE_TILES = [
+    { icon: '🔍', title: 'Buscar Torneos',  sub: 'Encuentra competencias',    route: '/screens/TournamentSearch',     testId: 'nav-search' },
+    { icon: '📜', title: 'Mi Historial',    sub: 'Torneos registrados',       route: '/screens/TournamentHistory',    testId: 'nav-history' },
+    { icon: '👤', title: 'Mi Perfil',       sub: 'Ver y editar tu info',      route: '/screens/ProfileScreen',        testId: 'nav-profile' },
     { icon: '⚡', title: 'Torneos Activos', sub: 'Gestiona inscripciones',    route: '/screens/TournamentManagement', testId: 'nav-management' },
   ];
 
+  const MANAGER_TILES = [
+    { icon: '🔍', title: 'Buscar Torneos', sub: 'Encuentra competencias',    route: '/screens/TournamentSearch', testId: 'nav-search' },
+    { icon: '👥', title: 'Mi Equipo',      sub: 'Gestiona tus atletas',      route: '/screens/TeamManagement',   testId: 'nav-team' },
+    { icon: '👤', title: 'Mi Perfil',      sub: 'Ver y editar tu info',      route: '/screens/ProfileScreen',    testId: 'nav-profile' },
+  ];
+
+  const QUICK_TILES = isManager ? MANAGER_TILES : ATHLETE_TILES;
+
   return (
     <Sidebar>
-      <div data-testid="main-screen" style={s.page}>
+      <style>{`
+        @media (max-width: 600px) {
+          .kb-main-page   { padding: 16px 12px !important; }
+          .kb-quick-grid  { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+        }
+      `}</style>
+      <div data-testid="main-screen" className="kb-main-page" style={s.page}>
         <div style={s.maxW}>
 
           {/* Welcome banner */}
           <div style={s.banner}>
-            <div style={s.bannerAvatar}>🥋</div>
+            <div style={s.bannerAvatar}>{isManager ? '📋' : '🥋'}</div>
             <div style={s.bannerText}>
               <div style={s.bannerHi}>Bienvenido, {currentUser.fullName} 👋</div>
-              <div style={s.bannerSub}>{currentUser.email} · Atleta</div>
+              <div style={s.bannerSub}>{currentUser.email} · {isManager ? 'Manager' : 'Atleta'}</div>
             </div>
           </div>
 
           {/* Quick actions */}
           <div style={s.sectionTitle}>Accesos Rápidos</div>
-          <div style={s.quickGrid}>
+          <div className="kb-quick-grid" style={s.quickGrid}>
             {QUICK_TILES.map(tile => (
               <div
                 key={tile.route}
@@ -120,52 +132,70 @@ export default function MainScreen() {
             ))}
           </div>
 
-          {/* Active tournaments */}
-          <div style={s.activeSection}>
-            <div style={s.activeSectionTitle}>
-              ⚡ Torneos Activos
-              {activeRegs.length > 0 && (
-                <span style={s.activeCount}>{activeRegs.length}</span>
+          {/* Athlete: active tournaments summary */}
+          {!isManager && (
+            <div style={s.activeSection}>
+              <div style={s.activeSectionTitle}>
+                ⚡ Torneos Activos
+                {activeRegs.length > 0 && (
+                  <span style={s.activeCount}>{activeRegs.length}</span>
+                )}
+              </div>
+
+              {activeRegs.length === 0 ? (
+                <div style={s.activeEmpty}>No tienes torneos activos. ¡Inscríbete en uno!</div>
+              ) : (
+                <>
+                  {activeRegs.map((reg, i) => {
+                    const t2 = getTournamentById(reg.tournamentId);
+                    return (
+                      <div
+                        key={reg.id ?? i}
+                        style={{ ...s.activeCard, borderBottom: i < activeRegs.length - 1 ? '1px solid #f5f5f5' : 'none' }}
+                        onClick={() => router.push('/screens/TournamentManagement' as any)}
+                      >
+                        <span style={s.activeIcon}>{t2?.logo ?? '🥋'}</span>
+                        <div style={s.activeMeta}>
+                          <div style={s.activeName}>{reg.tournamentName}</div>
+                          <div style={s.activeDate}>{t2?.date ?? ''} · {t2?.location ?? ''}</div>
+                          {reg.modalities && reg.modalities.length > 0 && (
+                            <div style={s.activeModals}>
+                              {reg.modalities.map((m, j) => (
+                                <span key={j} style={s.activeBadge}>{m.discipline}{m.weightDivision ? ` · ${m.weightDivision}` : ''}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <span style={s.activeArrow}>›</span>
+                      </div>
+                    );
+                  })}
+                  <button
+                    style={s.viewAllBtn}
+                    onClick={() => router.push('/screens/TournamentManagement' as any)}
+                  >
+                    Ver todos los activos →
+                  </button>
+                </>
               )}
             </div>
+          )}
 
-            {activeRegs.length === 0 ? (
-              <div style={s.activeEmpty}>No tienes torneos activos. ¡Inscríbete en uno!</div>
-            ) : (
-              <>
-                {activeRegs.map((reg, i) => {
-                  const t2 = getTournamentById(reg.tournamentId);
-                  return (
-                    <div
-                      key={reg.id ?? i}
-                      style={{ ...s.activeCard, borderBottom: i < activeRegs.length - 1 ? '1px solid #f5f5f5' : 'none' }}
-                      onClick={() => router.push('/screens/TournamentManagement' as any)}
-                    >
-                      <span style={s.activeIcon}>{t2?.logo ?? '🥋'}</span>
-                      <div style={s.activeMeta}>
-                        <div style={s.activeName}>{reg.tournamentName}</div>
-                        <div style={s.activeDate}>{t2?.date ?? ''} · {t2?.location ?? ''}</div>
-                        {reg.modalities && reg.modalities.length > 0 && (
-                          <div style={s.activeModals}>
-                            {reg.modalities.map((m, j) => (
-                              <span key={j} style={s.activeBadge}>{m.discipline}{m.weightDivision ? ` · ${m.weightDivision}` : ''}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <span style={s.activeArrow}>›</span>
-                    </div>
-                  );
-                })}
-                <button
-                  style={s.viewAllBtn}
-                  onClick={() => router.push('/screens/TournamentManagement' as any)}
-                >
-                  Ver todos los activos →
-                </button>
-              </>
-            )}
-          </div>
+          {/* Manager: call-to-action banner */}
+          {isManager && (
+            <div style={{ ...s.activeSection, textAlign: 'center' as const, padding: 32 }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>👥</div>
+              <div style={s.activeSectionTitle}>Gestiona tu equipo</div>
+              <div style={s.activeEmpty}>Registra atletas en torneos y realiza un seguimiento de sus inscripciones.</div>
+              <button
+                data-testid="btn-go-team"
+                style={{ marginTop: 16, padding: '10px 24px', background: '#6750a4', border: 'none', borderRadius: 20, color: '#fff', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}
+                onClick={() => router.push('/screens/TeamManagement' as any)}
+              >
+                Ver mi equipo →
+              </button>
+            </div>
+          )}
 
         </div>
       </div>

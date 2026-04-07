@@ -1,0 +1,9 @@
+Priority: 5
+Description: Add martial arts to the user profile page to allow users to specify their rank in each martial art.
+Resolved: (no)
+State: (waiting)
+Criteria of success: Users can successfully add and update their martial art ranks on their profile page.
+Plan generated: (no)
+Playwright test created: (no)
+Playwright test is passing: (no)
+Unit test created: (no)

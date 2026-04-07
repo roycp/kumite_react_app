@@ -16,12 +16,28 @@ interface NavItem {
   testId: string;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { icon: '🏠', label: 'Inicio',             route: '/screens/MainScreen',           testId: 'sidebar-home' },
-  { icon: '👤', label: 'Mi Perfil',          route: '/screens/ProfileScreen',         testId: 'sidebar-profile' },
-  { icon: '🏆', label: 'Buscar Torneos',     route: '/screens/TournamentSearch',      testId: 'sidebar-search' },
-  { icon: '⚡', label: 'Torneos Activos',    route: '/screens/TournamentManagement',  testId: 'sidebar-active' },
-  { icon: '📜', label: 'Historial',          route: '/screens/TournamentHistory',     testId: 'sidebar-history' },
+const ATHLETE_NAV: NavItem[] = [
+  { icon: '🏠', label: 'Inicio',            route: '/screens/MainScreen',              testId: 'sidebar-home' },
+  { icon: '👤', label: 'Mi Perfil',         route: '/screens/ProfileScreen',           testId: 'sidebar-profile' },
+  { icon: '🏆', label: 'Buscar Torneos',    route: '/screens/TournamentSearch',        testId: 'sidebar-search' },
+  { icon: '⚡', label: 'Torneos Activos',   route: '/screens/TournamentManagement',    testId: 'sidebar-active' },
+  { icon: '📜', label: 'Historial',         route: '/screens/TournamentHistory',       testId: 'sidebar-history' },
+];
+
+const MANAGER_NAV: NavItem[] = [
+  { icon: '🏠', label: 'Inicio',            route: '/screens/MainScreen',              testId: 'sidebar-home' },
+  { icon: '👤', label: 'Mi Perfil',         route: '/screens/ProfileScreen',           testId: 'sidebar-profile' },
+  { icon: '🏆', label: 'Buscar Torneos',    route: '/screens/TournamentSearch',        testId: 'sidebar-search' },
+  { icon: '👥', label: 'Mi Equipo',         route: '/screens/TeamManagement',          testId: 'sidebar-team' },
+];
+
+const ADMIN_NAV: NavItem[] = [
+  { icon: '🏠', label: 'Inicio',            route: '/screens/MainScreen',              testId: 'sidebar-home' },
+  { icon: '👤', label: 'Mi Perfil',         route: '/screens/ProfileScreen',           testId: 'sidebar-profile' },
+  { icon: '🥋', label: 'Artes Marciales',   route: '/screens/MartialArtsScreen',       testId: 'sidebar-martial-arts' },
+  { icon: '🏛️', label: 'Organizaciones',    route: '/screens/OrganizationsScreen',     testId: 'sidebar-organizations' },
+  { icon: '🏆', label: 'Torneos',           route: '/screens/AdminTournamentsScreen',  testId: 'sidebar-admin-tournaments' },
+  { icon: '👥', label: 'Usuarios',          route: '/screens/UsersScreen',             testId: 'sidebar-users' },
 ];
 
 interface SidebarProps {
@@ -34,6 +50,11 @@ export default function Sidebar({ children }: SidebarProps) {
   const { currentUser, logout } = useAuth();
 
   const [open, setOpen] = useState(false);
+
+  const navItems =
+    currentUser?.role === 'admin'   ? ADMIN_NAV :
+    currentUser?.role === 'manager' ? MANAGER_NAV :
+    ATHLETE_NAV;
 
   const handleLogout = async () => {
     await logout();
@@ -49,7 +70,7 @@ export default function Sidebar({ children }: SidebarProps) {
 
   const s: any = {
     // Layout wrapper
-    shell:      { display: 'flex', minHeight: '100vh', fontFamily: 'Roboto, sans-serif', position: 'relative' as const },
+    shell:      { display: 'flex', minHeight: '100vh', fontFamily: 'Roboto, sans-serif', position: 'relative' as const, overflowX: 'hidden' as const },
 
     // ── Sidebar ──
     sidebar:    (visible: boolean) => ({
@@ -97,7 +118,7 @@ export default function Sidebar({ children }: SidebarProps) {
     }),
 
     // ── Content area ──
-    content:    { marginLeft: 240, flex: 1, minWidth: 0 },
+    content:    { marginLeft: 240, flex: 1, minWidth: 0, height: '100vh', overflowY: 'auto' as const },
   };
 
   return (
@@ -107,16 +128,17 @@ export default function Sidebar({ children }: SidebarProps) {
         @media (max-width: 767px) {
           .kb-desktop-sidebar { display: none !important; }
           .kb-top-bar         { display: flex !important; }
-          .kb-content         { margin-left: 0 !important; padding-top: 56px; }
+          .kb-content         { margin-left: 0 !important; padding-top: 56px; height: 100vh; overflow-y: auto; }
         }
+        .kb-shell { overflow-x: hidden; max-width: 100vw; }
       `}</style>
 
-      <div style={s.shell}>
+      <div className="kb-shell" style={s.shell}>
         {/* Desktop sidebar */}
         <div className="kb-desktop-sidebar" style={s.desktopSidebar}>
           <SidebarContent
             currentUser={currentUser}
-            navItems={NAV_ITEMS}
+            navItems={navItems}
             isActive={isActive}
             navigate={navigate}
             handleLogout={handleLogout}
@@ -135,7 +157,7 @@ export default function Sidebar({ children }: SidebarProps) {
         <div style={s.sidebar(open)}>
           <SidebarContent
             currentUser={currentUser}
-            navItems={NAV_ITEMS}
+            navItems={navItems}
             isActive={isActive}
             navigate={navigate}
             handleLogout={handleLogout}
@@ -144,7 +166,7 @@ export default function Sidebar({ children }: SidebarProps) {
         </div>
 
         {/* Page content */}
-        <div className="kb-content" style={s.content}>
+        <div className="kb-content" style={s.content} data-testid="sidebar-content">
           {children}
         </div>
       </div>
@@ -166,9 +188,13 @@ function SidebarContent({ currentUser, navItems, isActive, navigate, handleLogou
     <>
       {/* User badge */}
       <div style={s.sbHeader}>
-        <div style={s.sbAvatar}>🥋</div>
-        <div style={s.sbName}>{currentUser?.fullName ?? 'Atleta'}</div>
-        <div style={s.sbEmail}>{currentUser?.email ?? ''}</div>
+        <div style={s.sbAvatar}>
+          {currentUser?.role === 'admin' ? '🛡️' : currentUser?.role === 'manager' ? '📋' : '🥋'}
+        </div>
+        <div style={s.sbName}>{currentUser?.fullName ?? 'Usuario'}</div>
+        <div style={s.sbEmail}>
+          {currentUser?.role === 'admin' ? 'Administrador' : currentUser?.role === 'manager' ? 'Manager' : 'Atleta'}
+        </div>
       </div>
 
       {/* Nav */}

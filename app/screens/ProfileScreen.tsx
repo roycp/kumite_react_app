@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
-import { useAuth } from '../../context/AuthContext';
 import * as DB from '../../db/database';
 import Sidebar from '../../components/Sidebar';
+import { useAuthGuard } from '../../hooks/useAuthGuard';
 
 export default function ProfileScreen() {
-  const router = useRouter();
-  const { currentUser, isLoading } = useAuth();
+  const { currentUser, isLoading } = useAuthGuard();
 
   const [editing, setEditing]   = useState(false);
   const [saving,  setSaving]    = useState(false);
@@ -17,10 +15,6 @@ export default function ProfileScreen() {
     fullName: '', country: '', age: '', gender: '',
     academy: '', weight: '', beltGrade: '',
   });
-
-  useEffect(() => {
-    if (!isLoading && !currentUser) router.replace('/screens/HomeScreen');
-  }, [currentUser, isLoading]);
 
   useEffect(() => {
     if (currentUser) {
@@ -62,7 +56,7 @@ export default function ProfileScreen() {
   };
 
   const s: any = {
-    page:       { minHeight: '100vh', background: '#f5f5f5', padding: '32px 24px', fontFamily: 'Roboto, sans-serif', overflowY: 'auto' },
+    page:       { minHeight: '100%', background: '#f5f5f5', padding: '32px 24px', fontFamily: 'Roboto, sans-serif', boxSizing: 'border-box' as const },
     maxW:       { maxWidth: 640, margin: '0 auto' },
     heading:    { display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 },
     avatar:     { width: 72, height: 72, borderRadius: '50%', background: '#6750a4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, flexShrink: 0 },
@@ -106,7 +100,14 @@ export default function ProfileScreen() {
 
   return (
     <Sidebar>
-      <div data-testid="profile-screen" style={s.page}>
+      <style>{`
+        @media (max-width: 600px) {
+          .kb-profile-page { padding: 16px 12px !important; }
+          .kb-profile-row  { grid-template-columns: 1fr !important; }
+          .kb-profile-card { padding: 16px !important; }
+        }
+      `}</style>
+      <div data-testid="profile-screen" className="kb-profile-page" style={s.page}>
         <div style={s.maxW}>
           {/* Header */}
           <div style={s.heading}>
@@ -121,24 +122,24 @@ export default function ProfileScreen() {
           {error  && <div style={s.errorBox}>{error}</div>}
 
           {/* Personal info */}
-          <div style={s.card}>
+          <div className="kb-profile-card" style={s.card}>
             <div style={s.sectionLbl}>INFORMACIÓN PERSONAL</div>
             <hr style={s.divider} />
-            <div style={s.row}>
+            <div className="kb-profile-row" style={s.row}>
               <Field label="Nombre Completo" k="fullName" />
               <Field label="País"            k="country" />
             </div>
-            <div style={s.row}>
+            <div className="kb-profile-row" style={s.row}>
               <Field label="Edad"   k="age"    type="number" />
               <Field label="Género" k="gender" options={['Masculino', 'Femenino', 'Otro']} />
             </div>
           </div>
 
           {/* Sports info */}
-          <div style={s.card}>
+          <div className="kb-profile-card" style={s.card}>
             <div style={s.sectionLbl}>INFORMACIÓN DEPORTIVA</div>
             <hr style={s.divider} />
-            <div style={s.row}>
+            <div className="kb-profile-row" style={s.row}>
               <Field label="Academia"         k="academy" />
               <Field label="Peso (kg)"        k="weight" type="number" />
             </div>
@@ -153,7 +154,7 @@ export default function ProfileScreen() {
           </div>
 
           {/* Readonly account info */}
-          <div style={s.readonlyCard}>
+          <div className="kb-profile-card" style={s.readonlyCard}>
             <div style={s.sectionLbl}>CUENTA</div>
             <hr style={s.divider} />
             <div style={s.field}>

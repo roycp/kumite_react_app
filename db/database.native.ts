@@ -13,7 +13,7 @@ export interface User {
   id: string;
   email: string;
   passwordHash: string;
-  role: 'athlete' | 'coach';
+  role: 'athlete' | 'manager' | 'admin';
   fullName: string;
   country: string;
   age: string;
@@ -32,7 +32,17 @@ export interface Registration {
   tournamentName: string;
   athleteName: string;
   email: string;
+  academy?: string;           // captured at registration / edit time
+  grade?: string;             // captured at registration / edit time
   timestamp: string;
+  synced: boolean;
+}
+
+export interface MartialArt {
+  id: string;
+  name: string;
+  logo: string;
+  createdAt: string;
   synced: boolean;
 }
 
@@ -73,6 +83,14 @@ const CoachAssignmentSchema: Realm.ObjectSchema = {
   },
 };
 
+const MartialArtSchema: Realm.ObjectSchema = {
+  name: 'MartialArt', primaryKey: 'id',
+  properties: {
+    id: 'string', name: 'string', logo: 'string', createdAt: 'string',
+    synced: { type: 'bool', default: false },
+  },
+};
+
 const SessionSchema: Realm.ObjectSchema = {
   name: 'Session', primaryKey: 'key',
   properties: { key: 'string', value: 'string' },
@@ -85,7 +103,7 @@ let _realm: Realm | null = null;
 async function getRealm(): Promise<Realm> {
   if (_realm && !_realm.isClosed) return _realm;
   _realm = await Realm.open({
-    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, SessionSchema],
+    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, MartialArtSchema, SessionSchema],
     schemaVersion: 1,
   });
   return _realm;
@@ -138,6 +156,20 @@ export async function getAllAthletes(): Promise<User[]> {
   return Array.from(realm.objects('User').filtered('role == "athlete"')).map((u: any) => toPlain<User>(u));
 }
 
+export async function getUsersByIds(ids: string[]): Promise<User[]> {
+  if (ids.length === 0) return [];
+  const realm = await getRealm();
+  const predicate = ids.map((_: string, i: number) => `id == $${i}`).join(' OR ');
+  return Array.from(realm.objects('User').filtered(predicate, ...ids)).map((u: any) => toPlain<User>(u));
+}
+
+export async function getRegistrationsByAthleteIds(athleteIds: string[]): Promise<Registration[]> {
+  if (athleteIds.length === 0) return [];
+  const realm = await getRealm();
+  const predicate = athleteIds.map((_: string, i: number) => `userId == $${i}`).join(' OR ');
+  return Array.from(realm.objects('Registration').filtered(predicate, ...athleteIds)).map((r: any) => toPlain<Registration>(r));
+}
+
 export async function updateUser(id: string, updates: Partial<Omit<User, 'id'>>): Promise<void> {
   const realm = await getRealm();
   const obj = realm.objectForPrimaryKey('User', id);
@@ -179,8 +211,65 @@ export async function getRegistrationsByUserId(userId: string): Promise<Registra
   return Array.from(realm.objects('Registration').filtered('userId == $0', userId)).map((r: any) => toPlain<Registration>(r));
 }
 
-// ── Coach assignments ─────────────────────────────────────────────────────────
+export async function getRegisteredTournamentIds(userId: string): Promise<string[]> {
+  const realm = await getRealm();
+  const regs = Array.from(realm.objects('Registration').filtered('userId == $0', userId)) as any[];
+  return [...new Set(regs.map((r: any) => r.tournamentId))];
+}
 
+export async function updateRegistration(id: string, updates: Partial<Omit<Registration, 'id' | 'synced'>>): Promise<void> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('Registration', id);
+  if (obj) realm.write(() => { Object.assign(obj, updates); });
+}
+
+export async function deleteRegistration(id: string): Promise<void> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('Registration', id);
+  if (obj) realm.write(() => { realm.delete(obj); });
+}
+
+// ── Martial Arts ──────────────────────────────────────────────────────────────
+
+export async function createMartialArt(data: Pick<MartialArt, 'name' | 'logo'>): Promise<MartialArt> {
+  const realm = await getRealm();
+  let art!: any;
+  realm.write(() => {
+    art = realm.create('MartialArt', { ...data, id: generateId(), createdAt: new Date().toISOString(), synced: false });
+  });
+  return toPlain<MartialArt>(art);
+}
+
+export async function getAllMartialArts(): Promise<MartialArt[]> {
+  const realm = await getRealm();
+  return Array.from(realm.objects('MartialArt')).map((a: any) => toPlain<MartialArt>(a));
+}
+
+export async function updateMartialArt(id: string, updates: Partial<Pick<MartialArt, 'name' | 'logo'>>): Promise<void> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('MartialArt', id);
+  if (obj) realm.write(() => { Object.assign(obj, updates); });
+}
+
+export async function deleteMartialArt(id: string): Promise<void> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('MartialArt', id);
+  if (obj) realm.write(() => { realm.delete(obj); });
+}
+
+// ── Manager assignments ───────────────────────────────────────────────────────
+
+export async function assignAthleteToManager(managerId: string, athleteId: string): Promise<void> {
+  return assignAthleteToCoach(managerId, athleteId);
+}
+export async function removeAthleteFromManager(managerId: string, athleteId: string): Promise<void> {
+  return removeAthleteFromCoach(managerId, athleteId);
+}
+export async function getAthletesByManagerId(managerId: string): Promise<User[]> {
+  return getAthletesByCoachId(managerId);
+}
+
+/** @deprecated */
 export async function assignAthleteToCoach(coachId: string, athleteId: string): Promise<void> {
   const realm = await getRealm();
   const existing = realm.objects('CoachAssignment').filtered('coachId == $0 AND athleteId == $1', coachId, athleteId);

@@ -7,10 +7,10 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:8082',
     headless: true,
-    screenshot: 'only-on-failure',
+    screenshot: 'on',
     video: 'on',
   },
-  workers: 2,
+  workers: 1,
   projects: [
     {
       name: 'chromium',

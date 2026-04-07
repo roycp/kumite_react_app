@@ -8,11 +8,13 @@ export default function TournamentDetail() {
   const router = useRouter();
   const { t } = useTranslation();
   const { currentUser, isLoading } = useAuth();
-  const params = useLocalSearchParams<{ id: string; name: string }>();
+  const params = useLocalSearchParams<{ id: string; name: string; athleteId?: string; athleteName?: string }>();
 
-  const id         = String(params.id || '1');
-  const tournament = getTournamentById(id);
-  const name       = params.name ? decodeURIComponent(String(params.name)) : (tournament?.name ?? '');
+  const id          = String(params.id || '1');
+  const tournament  = getTournamentById(id);
+  const name        = params.name ? decodeURIComponent(String(params.name)) : (tournament?.name ?? '');
+  const athleteId   = params.athleteId   ? String(params.athleteId)   : undefined;
+  const athleteName = params.athleteName ? decodeURIComponent(String(params.athleteName)) : undefined;
 
   // Auth guard
   useEffect(() => {
@@ -61,11 +63,22 @@ export default function TournamentDetail() {
           <strong>{t('detail.description')}:</strong> {t('detail.descriptionText')}
         </div>
 
+        {athleteId && athleteName && (
+          <div style={{ background: '#ede7f6', border: '1px solid #d6c8f5', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 14, color: '#6750a4', fontWeight: 600 }}>
+            📋 Inscribiendo a: <strong>{athleteName}</strong>
+          </div>
+        )}
+
         <button
           data-testid="btn-syncup-tournament"
           style={s.syncBtn}
           type="button"
-          onClick={() => router.push(`/screens/FormScreen?tournamentId=${id}&tournamentName=${encodeURIComponent(name)}` as any)}
+          onClick={() => {
+            const qs = athleteId
+              ? `&athleteId=${athleteId}&athleteName=${encodeURIComponent(athleteName ?? '')}`
+              : '';
+            router.push(`/screens/FormScreen?tournamentId=${id}&tournamentName=${encodeURIComponent(name)}${qs}` as any);
+          }}
         >
           🥋 {t('detail.syncup')}
         </button>

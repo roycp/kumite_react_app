@@ -1,0 +1,45 @@
+Priority: 2
+Description: Add a martial art with name and logo.
+Resolved: (yes)
+State: (done)
+Criteria of success: Martial arts can be added, edited, and displayed correctly.
+Plan generated: (yes)
+Playwright test created: (yes) — e2e/add-martial-arts.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Execution Plan
+
+### DB layer (database.web.ts + database.native.ts)
+- Add `MartialArt` interface: { id, name, logo (emoji/text), createdAt, synced }
+- Add storage key `db:martial_arts` to KEYS
+- Add CRUD: `createMartialArt`, `getAllMartialArts`, `updateMartialArt`, `deleteMartialArt`
+- Mirror the same changes in database.native.ts
+
+### Screen (app/screens/MartialArtsScreen.tsx)
+- Admin-only: redirect non-admin users to MainScreen
+- Uses `useAuthGuard` + permission check for `manage_martial_arts`
+- Layout: page title, add-form card at top, list of martial art cards below
+- Add form: name input + logo emoji input + Save button (inline, no modal needed)
+- Martial art card: shows logo emoji + name, Edit button (inline edit) + Delete button
+- Empty state when no martial arts exist
+- All styles via KumiteTheme tokens, same card/button patterns as TeamManagement
+
+### Playwright test (e2e/add-martial-arts.spec.ts)
+- Inject admin user via localStorage (no signup)
+- Navigate to /screens/MartialArtsScreen
+- Add a martial art (Karate, 🥋) → verify it appears in list
+- Edit its name → verify updated name shown
+- Delete it → verify empty state
+- Also verify non-admin (athlete) is redirected away
+
+## Comments
+- Logo is a plain text/emoji field — no file upload needed at this stage
+- Sidebar already wired: testId="sidebar-martial-arts" → /screens/MartialArtsScreen
+
+## Review Notes
+- Replaced manual `role !== 'admin'` guard with `usePermission('manage_martial_arts')` for consistency with the permission system
+- All styles use KumiteTheme tokens — no hard-coded values
+- DB functions follow the same readCollection/writeCollection pattern as the rest of database.web.ts; mirrored in database.native.ts with Realm
+- Removed unused `karateCard` variable from the test
+- All 3 tests pass (2 in add-martial-arts.spec.ts + 1 admin-smoke.spec.ts)

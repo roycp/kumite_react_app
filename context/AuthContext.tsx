@@ -6,7 +6,7 @@ import * as DB from '../db/database';
 export interface RegisterData {
   email: string;
   password: string;
-  role: 'athlete' | 'coach';
+  role: 'athlete' | 'manager' | 'admin';
   fullName: string;
   country: string;
   age: string;

@@ -1,0 +1,9 @@
+Priority: 4
+Description: Add an organization with logo, name, acronym, description, and martial art.
+Resolved: (no)
+State: (waiting)
+Criteria of success: Organization can be added successfully and displayed in the list.
+Plan generated: (no)
+Playwright test created: (no)
+Playwright test is passing: (no)
+Unit test created: (no)

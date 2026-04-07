@@ -5,6 +5,72 @@
 
 import { Platform } from 'react-native';
 
+// ── KumiteApp design tokens ───────────────────────────────────────────────────
+// Single source of truth for all inline styles across screens and components.
+
+export const KumiteTheme = {
+  colors: {
+    primary:      '#6750a4',
+    primaryLight: '#f3eeff',
+    primaryAlt:   '#ede7f6',
+    dark:         '#1a1a2e',
+    success:      '#2e7d32',
+    successLight: '#e8f5e9',
+    error:        '#b3261e',
+    errorLight:   '#fce8e6',
+    background:   '#f5f5f5',
+    card:         '#fff',
+    border:       '#e0e0e0',
+    borderLight:  '#efefef',
+    muted:        '#888',
+    mutedLight:   '#aaa',
+    text:         '#333',
+    textSub:      '#555',
+    textLight:    '#666',
+  },
+  spacing: {
+    xs:  4,
+    sm:  8,
+    md:  16,
+    lg:  24,
+    xl:  32,
+  },
+  radius: {
+    sm:   8,
+    md:   12,
+    lg:   14,
+    xl:   20,
+    pill: 24,
+  },
+  shadow: {
+    card:         '0 2px 8px rgba(0,0,0,0.08)',
+    modal:        '0 8px 40px rgba(0,0,0,0.3)',
+    input:        '0 2px 8px rgba(0,0,0,0.06)',
+    hoverPrimary: '0 4px 16px rgba(103,80,164,0.2)',
+  },
+  font: {
+    family: 'Roboto, sans-serif',
+    size: {
+      xs:   11,
+      sm:   12,
+      md:   13,
+      base: 14,
+      lg:   15,
+      xl:   16,
+      '2xl': 20,
+      '3xl': 22,
+      '4xl': 26,
+    },
+    weight: {
+      normal:    400,
+      medium:    500,
+      semibold:  600,
+      bold:      700,
+      extrabold: 800,
+    },
+  },
+} as const;
+
 const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
 
