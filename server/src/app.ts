@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import { User } from './models/User';
+import { requireAuth } from './middleware/auth';
+import authRouter            from './routes/auth';
 import registrationsRouter   from './routes/registrations';
 import tournamentsRouter      from './routes/tournaments';
 import martialArtsRouter      from './routes/martialArts';
@@ -19,9 +21,13 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// ── Users ─────────────────────────────────────────────────────────────────────
+// ── Auth ──────────────────────────────────────────────────────────────────────
 
-app.get('/api/users', async (_req, res) => {
+app.use('/api/auth', authRouter);
+
+// ── Users (protected) ─────────────────────────────────────────────────────────
+
+app.get('/api/users', requireAuth, async (_req, res) => {
   try {
     const users = await User.find({}, { passwordHash: 0 }).lean();
     res.json(users);

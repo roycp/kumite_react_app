@@ -1,0 +1,51 @@
+Priority: 21
+Description: Implement a user authentication system similar to Devise to create user accounts and safely persist passwords.
+Resolved: (yes)
+State: (done)
+Criteria of success: Users can register, log in, and have their passwords securely stored, similar to Devise functionality in Rails.
+Plan generated: (yes)
+Playwright test created: (yes) — e2e/add-user-authentication.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Execution Plan
+
+Files to create/edit in server/:
+- `server/src/middleware/auth.ts` — JWT verification middleware (requireAuth)
+- `server/src/routes/auth.ts` — POST /api/auth/register and POST /api/auth/login
+- `server/src/app.ts` (edit) — register auth routes; protect GET /api/users
+- `server/package.json` (edit) — add bcryptjs, jsonwebtoken deps + @types
+
+Approach:
+- bcryptjs for password hashing (salt rounds = 12)
+- jsonwebtoken for JWT session tokens (signed with JWT_SECRET env var)
+- Register: validate fields, check uniqueness, hash password, create User, return JWT + user
+- Login: find by email, bcrypt.compare, return JWT + user
+- requireAuth middleware: verify Bearer token, attach decoded user to request
+
+Playwright test:
+- register → 201 + token
+- login with correct credentials → 200 + token
+- login wrong password → 401
+- login unknown email → 401
+- register duplicate email → 409
+- GET /api/users without token → 401
+- GET /api/users with valid token → 200
+
+## Comments
+
+- Added bcryptjs (salt rounds=12) for proper password hashing instead of simple bit-shift hash
+- Added jsonwebtoken for 7-day JWT session tokens signed with JWT_SECRET env var
+- server/src/middleware/auth.ts: requireAuth middleware + signToken helper
+- server/src/routes/auth.ts: POST /api/auth/register and POST /api/auth/login
+- GET /api/users now requires Bearer token (protected)
+- passwordHash never returned in responses (excluded by Mongoose projection)
+- 8 tests cover: register, duplicate 409, login success, wrong password 401, unknown email 401, unprotected route 401, protected route 200, password not in responses
+
+## Review Notes
+
+- requireAuth middleware centralises JWT verification — no per-route token logic
+- bcrypt.compare used (timing-safe comparison) against stored hash
+- signToken uses HS256 with configurable JWT_SECRET — change default in production
+- Registration/login both use email.toLowerCase() for case-insensitive lookup
+- All 8 tests pass
