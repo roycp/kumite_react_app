@@ -1,6 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import { User } from './models/User';
+import registrationsRouter   from './routes/registrations';
+import tournamentsRouter      from './routes/tournaments';
+import martialArtsRouter      from './routes/martialArts';
+import organizationsRouter    from './routes/organizations';
+import rankSystemsRouter      from './routes/rankSystems';
+import roleDefinitionsRouter  from './routes/roleDefinitions';
 
 const app = express();
 
@@ -68,5 +74,14 @@ app.delete('/api/users/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete user' });
   }
 });
+
+// ── Additional resource routes ─────────────────────────────────────────────────
+
+app.use('/api/registrations',    registrationsRouter);
+app.use('/api/tournaments',      tournamentsRouter);
+app.use('/api/martial-arts',     martialArtsRouter);
+app.use('/api/organizations',    organizationsRouter);
+app.use('/api/rank-systems',     rankSystemsRouter);
+app.use('/api/role-definitions', roleDefinitionsRouter);
 
 export default app;

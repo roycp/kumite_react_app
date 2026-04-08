@@ -1,0 +1,48 @@
+Priority: 20
+Description: Create RESTful endpoints to persist necessary information into MongoDB.
+Resolved: (yes)
+State: (done)
+Criteria of success: Endpoints are available to interact with MongoDB for creating, reading, updating, and deleting required datasets.
+Plan generated: (yes)
+Playwright test created: (yes) — e2e/create-endpoints-for-mongodb.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Execution Plan
+
+Files to create/edit (all under server/):
+- `server/src/models/Registration.ts` — Mongoose schema for registrations
+- `server/src/models/Tournament.ts` — Mongoose schema for tournaments
+- `server/src/models/MartialArt.ts` — Mongoose schema for martial arts
+- `server/src/models/Organization.ts` — Mongoose schema for organizations
+- `server/src/models/RankSystem.ts` — Mongoose schema for rank systems
+- `server/src/models/RoleDefinition.ts` — Mongoose schema for role definitions
+- `server/src/routes/registrations.ts` — Express router for /api/registrations CRUD
+- `server/src/routes/tournaments.ts` — Express router for /api/tournaments CRUD
+- `server/src/routes/martialArts.ts` — Express router for /api/martial-arts CRUD
+- `server/src/routes/organizations.ts` — Express router for /api/organizations CRUD
+- `server/src/routes/rankSystems.ts` — Express router for /api/rank-systems CRUD
+- `server/src/routes/roleDefinitions.ts` — Express router for /api/role-definitions CRUD
+- `server/src/app.ts` (edit) — register all new routers
+- `e2e/create-endpoints-for-mongodb.spec.ts` — Playwright API tests
+
+Playwright test approach:
+- Reuse startTestServer/stopTestServer from server/src/test-server.ts
+- Test each endpoint group: create → list → update → delete
+
+## Comments
+
+- Created Mongoose models: Registration, Tournament, MartialArt, Organization, RankSystem, RoleDefinition
+- Created Express routers: registrations, tournaments, martial-arts, organizations, rank-systems, role-definitions
+- All routers follow consistent CRUD pattern (list, get by id, create 201, update, delete 204)
+- RoleDefinition enforces unique name with 409 on duplicate
+- User CRUD from previous ticket kept; all routers registered in app.ts
+- 7 Playwright API tests: CRUD cycle for each entity + duplicate role name 409
+
+## Review Notes
+
+- Consistent router pattern across all 6 new resources — no duplicated boilerplate beyond the minimal CRUD shape
+- Role types match existing RoleDefinition interface from database.web.ts
+- Registration schema matches ModalityEntry interface shape
+- Tournament status enum validated by Mongoose (upcoming/active/closed/cancelled)
+- All 7 tests pass

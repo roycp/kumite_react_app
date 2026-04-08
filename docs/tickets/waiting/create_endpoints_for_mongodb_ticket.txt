@@ -1,9 +1,0 @@
-Priority: 20
-Description: Create RESTful endpoints to persist necessary information into MongoDB.
-Resolved: (no)
-State: (waiting)
-Criteria of success: Endpoints are available to interact with MongoDB for creating, reading, updating, and deleting required datasets.
-Plan generated: (no)
-Playwright test created: (no)
-Playwright test is passing: (no)
-Unit test created: (no)
