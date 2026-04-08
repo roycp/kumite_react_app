@@ -1,0 +1,48 @@
+Priority: 3
+Description: Develop an admin interface for organizing tournament brackets with drag-and-drop athlete arrangement.
+Resolved: (no)
+State: (done)
+Criteria of success: Admin page is fully functional with drag-and-drop athlete arrangement and changes are persisted to the backend.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/create-admin-bracket-page.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+Title: Create Admin Page for Bracket Management
+Objective: Develop an admin interface for organizing tournament brackets with drag-and-drop.
+Details: Allow admins to arrange athletes via drag-and-drop and see real-time updates.
+Steps:
+1. Design UI layout.
+2. Implement drag-and-drop functionality.
+3. Connect to backend for data persistence.
+Acceptance Criteria: Admin page is fully functional with real-time updates and documented use.
+
+## Execution Plan
+
+Files to create/edit:
+- `db/database.web.ts` (edit) — add `getBracketSeeds(tournamentId)` and `saveBracketSeeds(tournamentId, seeds)` using `db:bracket_seeds` localStorage key
+- `db/database.native.ts` (edit) — add same functions using Realm `BracketSeed` object
+- `app/screens/BracketAdminScreen.tsx` (create) — admin seeding UI per category; up/down buttons + HTML5 drag-and-drop; Save button persists via `saveBracketSeeds`
+- `app/screens/TournamentDashboardScreen.tsx` (edit) — add "Gestionar Seeding" button in lifecycle card
+- `app/screens/TournamentBracketScreen.tsx` (edit) — load saved seeds and apply to participant order
+- `app/_layout.tsx` (edit) — register `screens/BracketAdminScreen`
+- `e2e/create-admin-bracket-page.spec.ts` — tests: reorder via up/down buttons, save persists, bracket view applies seed order, athlete redirected
+
+Approach:
+- Bracket seeds stored as `{ tournamentId, seeds: Record<categoryKey, string[]> }` in `db:bracket_seeds` array
+- BracketAdminScreen groups registrations same as TournamentBracketScreen; shows editable list per category
+- Up/Down arrow buttons move athletes; drag-and-drop also wired (HTML5 DnD)
+- Save button writes to DB and shows success toast
+- TournamentBracketScreen checks for saved seeds before building g-loot matches
+
+## Review Notes
+- Permissions: `usePermission('manage_tournaments')` + `useAuthGuard()` — consistent with other organizer screens.
+- `groupByCategory` was duplicated from TournamentBracketScreen — extracted to `utils/bracketUtils.ts`; both screens now import from there.
+- `BracketCategory` interface shared via bracketUtils; no local duplicates remain.
+- DB functions (`getBracketSeeds`, `saveBracketSeeds`) added to both web (localStorage) and native (Realm) implementations.
+- Theme tokens from KumiteTheme throughout; no hardcoded values.
+- TournamentDashboardScreen updated with "Gestionar Seeding" navigation button.
+- TournamentBracketScreen updated to apply saved seed order before building g-loot match tree.
+- All 6 new tests pass; existing bracket specs unaffected.
+
+## Comments

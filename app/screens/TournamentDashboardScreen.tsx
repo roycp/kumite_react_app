@@ -242,6 +242,13 @@ export default function TournamentDashboardScreen() {
               >
                 🏆 Ver Bracket
               </button>
+              <button
+                style={{ padding: '9px 22px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, cursor: 'pointer', fontFamily: 'inherit', fontSize: T.font.size.base, background: T.colors.card, color: T.colors.textSub, fontWeight: T.font.weight.bold }}
+                onClick={() => router.push(`/screens/BracketAdminScreen?tournamentId=${tournament.id}`)}
+                data-testid="btn-manage-seeding"
+              >
+                🎯 Gestionar Seeding
+              </button>
             </div>
           </div>
 

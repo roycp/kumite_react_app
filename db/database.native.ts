@@ -241,6 +241,14 @@ const RoleDefinitionSchema: Realm.ObjectSchema = {
   },
 };
 
+const BracketSeedSchema: Realm.ObjectSchema = {
+  name: 'BracketSeed', primaryKey: 'tournamentId',
+  properties: {
+    tournamentId: 'string',
+    seedsJson: 'string', // JSON of Record<categoryKey, string[]>
+  },
+};
+
 // ── Singleton ─────────────────────────────────────────────────────────────────
 
 let _realm: Realm | null = null;
@@ -248,8 +256,8 @@ let _realm: Realm | null = null;
 async function getRealm(): Promise<Realm> {
   if (_realm && !_realm.isClosed) return _realm;
   _realm = await Realm.open({
-    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, OrganizationSchema, RankSystemSchema, MartialArtSchema, UserMartialArtRankSchema, TournamentTemplateSchema, TournamentSchema, SessionSchema, RoleDefinitionSchema],
-    schemaVersion: 2,
+    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, OrganizationSchema, RankSystemSchema, MartialArtSchema, UserMartialArtRankSchema, TournamentTemplateSchema, TournamentSchema, SessionSchema, RoleDefinitionSchema, BracketSeedSchema],
+    schemaVersion: 3,
   });
   return _realm;
 }
@@ -730,4 +738,23 @@ export async function deleteRoleDefinition(id: string): Promise<void> {
   const obj = realm.objectForPrimaryKey('RoleDefinition', id);
   if (!obj) return;
   realm.write(() => { realm.delete(obj); });
+}
+
+// ── Bracket Seeds ─────────────────────────────────────────────────────────────
+
+export async function getBracketSeeds(tournamentId: string): Promise<Record<string, string[]>> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('BracketSeed', tournamentId) as any;
+  if (!obj) return {};
+  try { return JSON.parse(obj.seedsJson); } catch { return {}; }
+}
+
+export async function saveBracketSeeds(
+  tournamentId: string,
+  seeds: Record<string, string[]>,
+): Promise<void> {
+  const realm = await getRealm();
+  realm.write(() => {
+    realm.create('BracketSeed', { tournamentId, seedsJson: JSON.stringify(seeds) }, Realm.UpdateMode.All);
+  });
 }

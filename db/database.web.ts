@@ -150,17 +150,18 @@ export interface UserMartialArtRank {
 // ── Storage keys ──────────────────────────────────────────────────────────────
 
 const KEYS = {
-  USERS:         'db:users',
-  REGISTRATIONS: 'db:registrations',
-  ASSIGNMENTS:   'db:coach_assignments',
-  MARTIAL_ARTS:  'db:martial_arts',
-  RANK_SYSTEMS:  'db:rank_systems',
-  ORGANIZATIONS: 'db:organizations',
-  TEMPLATES:     'db:tournament_templates',
-  TOURNAMENTS:   'db:tournaments',
-  USER_RANKS:    'db:user_martial_art_ranks',
-  ROLE_DEFS:     'db:role_definitions',
-  SESSION:       'db:session_user_id',
+  USERS:          'db:users',
+  REGISTRATIONS:  'db:registrations',
+  ASSIGNMENTS:    'db:coach_assignments',
+  MARTIAL_ARTS:   'db:martial_arts',
+  RANK_SYSTEMS:   'db:rank_systems',
+  ORGANIZATIONS:  'db:organizations',
+  TEMPLATES:      'db:tournament_templates',
+  TOURNAMENTS:    'db:tournaments',
+  USER_RANKS:     'db:user_martial_art_ranks',
+  ROLE_DEFS:      'db:role_definitions',
+  BRACKET_SEEDS:  'db:bracket_seeds',
+  SESSION:        'db:session_user_id',
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -542,4 +543,22 @@ export async function updateRoleDefinition(
 export async function deleteRoleDefinition(id: string): Promise<void> {
   const defs = await readCollection<RoleDefinition>(KEYS.ROLE_DEFS);
   await writeCollection(KEYS.ROLE_DEFS, defs.filter(d => d.id !== id));
+}
+
+// ── Bracket Seeds ─────────────────────────────────────────────────────────────
+
+interface BracketSeedRecord { tournamentId: string; seeds: Record<string, string[]>; }
+
+export async function getBracketSeeds(tournamentId: string): Promise<Record<string, string[]>> {
+  const all = await readCollection<BracketSeedRecord>(KEYS.BRACKET_SEEDS);
+  return all.find(r => r.tournamentId === tournamentId)?.seeds ?? {};
+}
+
+export async function saveBracketSeeds(
+  tournamentId: string,
+  seeds: Record<string, string[]>,
+): Promise<void> {
+  const all = await readCollection<BracketSeedRecord>(KEYS.BRACKET_SEEDS);
+  const updated = all.filter(r => r.tournamentId !== tournamentId);
+  await writeCollection(KEYS.BRACKET_SEEDS, [...updated, { tournamentId, seeds }]);
 }

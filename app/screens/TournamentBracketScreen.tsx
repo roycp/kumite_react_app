@@ -15,6 +15,7 @@ import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { usePermission } from '../../hooks/usePermission';
 import { KumiteTheme as T } from '../../constants/theme';
+import { groupByCategory, type BracketCategory as Category } from '../../utils/bracketUtils';
 
 // ── Bracket helpers ────────────────────────────────────────────────────────────
 
@@ -61,31 +62,6 @@ function buildGlootMatches(participants: string[]): MatchType[] {
   return matches;
 }
 
-interface Category {
-  key: string;
-  label: string;
-  participants: string[];
-}
-
-function groupByCategory(registrations: DB.Registration[]): Category[] {
-  const map: Record<string, string[]> = {};
-  for (const reg of registrations) {
-    for (const entry of (reg.modalities ?? [])) {
-      const disc     = entry.discipline || 'Sin disciplina';
-      const gender   = entry.gender     || 'General';
-      const ageGroup = entry.ageGroup   || 'General';
-      const key = `${disc}-${gender}-${ageGroup}`;
-      if (!map[key]) map[key] = [];
-      map[key].push(reg.athleteName || 'Atleta');
-    }
-  }
-  return Object.entries(map)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, participants]) => {
-      const [disc, gender, ageGroup] = key.split('-');
-      return { key, label: `${disc} — ${gender} — ${ageGroup}`, participants };
-    });
-}
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
@@ -125,12 +101,26 @@ export default function TournamentBracketScreen() {
   const load = useCallback(async () => {
     if (!tournamentId) return;
     setLoading(true);
-    const [t, regs] = await Promise.all([
+    const [t, regs, seeds] = await Promise.all([
       DB.getTournamentById(tournamentId),
       DB.getRegistrationsByTournamentId(tournamentId),
+      DB.getBracketSeeds(tournamentId),
     ]);
     setTournament(t);
-    setCategories(groupByCategory(regs));
+    const cats = groupByCategory(regs);
+    // Apply saved seed order when available
+    const seeded = cats.map(cat => {
+      const savedOrder = seeds[cat.key];
+      if (!savedOrder || savedOrder.length === 0) return cat;
+      const orderMap = new Map(savedOrder.map((name, i) => [name, i]));
+      const sorted = [...cat.participants].sort((a, b) => {
+        const ia = orderMap.has(a) ? orderMap.get(a)! : Infinity;
+        const ib = orderMap.has(b) ? orderMap.get(b)! : Infinity;
+        return ia - ib;
+      });
+      return { ...cat, participants: sorted };
+    });
+    setCategories(seeded);
     setLoading(false);
   }, [tournamentId]);
 

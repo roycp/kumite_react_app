@@ -28,6 +28,7 @@ export default function RootLayout() {
             <Stack.Screen name="screens/CoachAthletesScreen" options={{ title: 'Mis Atletas' }} />
             <Stack.Screen name="screens/ProfileScreen" options={{ headerShown: false }} />
             <Stack.Screen name="screens/TournamentHistory" options={{ headerShown: false }} />
+            <Stack.Screen name="screens/BracketAdminScreen" options={{ headerShown: false }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>
