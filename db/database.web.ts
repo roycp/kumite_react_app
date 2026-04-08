@@ -85,6 +85,33 @@ export interface CoachAssignment {
   synced: boolean;
 }
 
+export interface WeightClass {
+  id: string;
+  label: string;
+  minKg: number | null;
+  maxKg: number | null;
+}
+
+export interface TemplateCategory {
+  id: string;
+  name: string;
+  discipline: string;
+  gender: string;
+  ageGroup: string;
+  rankRange: string;
+}
+
+export interface TournamentTemplate {
+  id: string;
+  name: string;
+  description: string;
+  modalities: string[];
+  weightClasses: WeightClass[];
+  categories: TemplateCategory[];
+  createdAt: string;
+  synced: boolean;
+}
+
 export interface Tournament {
   id: string;
   name: string;
@@ -116,6 +143,7 @@ const KEYS = {
   MARTIAL_ARTS:  'db:martial_arts',
   RANK_SYSTEMS:  'db:rank_systems',
   ORGANIZATIONS: 'db:organizations',
+  TEMPLATES:     'db:tournament_templates',
   TOURNAMENTS:   'db:tournaments',
   USER_RANKS:    'db:user_martial_art_ranks',
   SESSION:       'db:session_user_id',
@@ -321,6 +349,31 @@ export async function updateOrganization(id: string, updates: Partial<Omit<Organ
 export async function deleteOrganization(id: string): Promise<void> {
   const orgs = await readCollection<Organization>(KEYS.ORGANIZATIONS);
   await writeCollection(KEYS.ORGANIZATIONS, orgs.filter(o => o.id !== id));
+}
+
+// ── Tournament Templates ──────────────────────────────────────────────────────
+
+export async function createTemplate(data: Omit<TournamentTemplate, 'id' | 'createdAt' | 'synced'>): Promise<TournamentTemplate> {
+  const templates = await readCollection<TournamentTemplate>(KEYS.TEMPLATES);
+  const template: TournamentTemplate = { ...data, id: generateId(), createdAt: new Date().toISOString(), synced: false };
+  templates.push(template);
+  await writeCollection(KEYS.TEMPLATES, templates);
+  return template;
+}
+
+export async function getAllTemplates(): Promise<TournamentTemplate[]> {
+  return readCollection<TournamentTemplate>(KEYS.TEMPLATES);
+}
+
+export async function updateTemplate(id: string, updates: Partial<Omit<TournamentTemplate, 'id' | 'createdAt' | 'synced'>>): Promise<void> {
+  const templates = await readCollection<TournamentTemplate>(KEYS.TEMPLATES);
+  const idx = templates.findIndex(t => t.id === id);
+  if (idx !== -1) { templates[idx] = { ...templates[idx], ...updates }; await writeCollection(KEYS.TEMPLATES, templates); }
+}
+
+export async function deleteTemplate(id: string): Promise<void> {
+  const templates = await readCollection<TournamentTemplate>(KEYS.TEMPLATES);
+  await writeCollection(KEYS.TEMPLATES, templates.filter(t => t.id !== id));
 }
 
 // ── Tournaments ───────────────────────────────────────────────────────────────

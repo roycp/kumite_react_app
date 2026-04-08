@@ -1,9 +1,0 @@
-Priority: 9
-Description: Create an administrator tournament template to facilitate creating tournaments based on predefined structures.
-Resolved: (no)
-State: (waiting)
-Criteria of success: Templates for tournaments with structures like weight classes, modalities (katas), and categories (female, male, mixed, children, adults, ranks) are available and customizable.
-Plan generated: (no)
-Playwright test created: (no)
-Playwright test is passing: (no)
-Unit test created: (no)

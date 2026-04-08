@@ -77,6 +77,33 @@ export interface CoachAssignment {
   synced: boolean;
 }
 
+export interface WeightClass {
+  id: string;
+  label: string;
+  minKg: number | null;
+  maxKg: number | null;
+}
+
+export interface TemplateCategory {
+  id: string;
+  name: string;
+  discipline: string;
+  gender: string;
+  ageGroup: string;
+  rankRange: string;
+}
+
+export interface TournamentTemplate {
+  id: string;
+  name: string;
+  description: string;
+  modalities: string[];
+  weightClasses: WeightClass[];
+  categories: TemplateCategory[];
+  createdAt: string;
+  synced: boolean;
+}
+
 export interface Tournament {
   id: string;
   name: string;
@@ -154,6 +181,17 @@ const MartialArtSchema: Realm.ObjectSchema = {
   },
 };
 
+const TournamentTemplateSchema: Realm.ObjectSchema = {
+  name: 'TournamentTemplate', primaryKey: 'id',
+  properties: {
+    id: 'string', name: 'string', description: 'string',
+    modalitiesStr:    { type: 'string', default: '' },  // JSON array string
+    weightClassesStr: { type: 'string', default: '' },  // JSON array string
+    categoriesStr:    { type: 'string', default: '' },  // JSON array string
+    createdAt: 'string', synced: { type: 'bool', default: false },
+  },
+};
+
 const TournamentSchema: Realm.ObjectSchema = {
   name: 'Tournament', primaryKey: 'id',
   properties: {
@@ -184,7 +222,7 @@ let _realm: Realm | null = null;
 async function getRealm(): Promise<Realm> {
   if (_realm && !_realm.isClosed) return _realm;
   _realm = await Realm.open({
-    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, OrganizationSchema, RankSystemSchema, MartialArtSchema, UserMartialArtRankSchema, TournamentSchema, SessionSchema],
+    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, OrganizationSchema, RankSystemSchema, MartialArtSchema, UserMartialArtRankSchema, TournamentTemplateSchema, TournamentSchema, SessionSchema],
     schemaVersion: 1,
   });
   return _realm;
@@ -398,6 +436,59 @@ export async function updateOrganization(id: string, updates: Partial<Omit<Organ
 export async function deleteOrganization(id: string): Promise<void> {
   const realm = await getRealm();
   const obj = realm.objectForPrimaryKey('Organization', id);
+  if (obj) realm.write(() => { realm.delete(obj); });
+}
+
+// ── Tournament Templates ──────────────────────────────────────────────────────
+
+function templateFromRealm(t: any): TournamentTemplate {
+  const plain = toPlain<any>(t);
+  return {
+    ...plain,
+    modalities:    plain.modalitiesStr    ? JSON.parse(plain.modalitiesStr)    : [],
+    weightClasses: plain.weightClassesStr ? JSON.parse(plain.weightClassesStr) : [],
+    categories:    plain.categoriesStr    ? JSON.parse(plain.categoriesStr)    : [],
+  };
+}
+
+export async function createTemplate(data: Omit<TournamentTemplate, 'id' | 'createdAt' | 'synced'>): Promise<TournamentTemplate> {
+  const realm = await getRealm();
+  let t!: any;
+  const { modalities, weightClasses, categories, ...rest } = data;
+  realm.write(() => {
+    t = realm.create('TournamentTemplate', {
+      ...rest,
+      modalitiesStr:    JSON.stringify(modalities ?? []),
+      weightClassesStr: JSON.stringify(weightClasses ?? []),
+      categoriesStr:    JSON.stringify(categories ?? []),
+      id: generateId(), createdAt: new Date().toISOString(), synced: false,
+    });
+  });
+  return templateFromRealm(t);
+}
+
+export async function getAllTemplates(): Promise<TournamentTemplate[]> {
+  const realm = await getRealm();
+  return Array.from(realm.objects('TournamentTemplate')).map((t: any) => templateFromRealm(t));
+}
+
+export async function updateTemplate(id: string, updates: Partial<Omit<TournamentTemplate, 'id' | 'createdAt' | 'synced'>>): Promise<void> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('TournamentTemplate', id);
+  if (obj) {
+    const { modalities, weightClasses, categories, ...rest } = updates;
+    realm.write(() => {
+      Object.assign(obj, rest);
+      if (modalities !== undefined)    (obj as any).modalitiesStr    = JSON.stringify(modalities);
+      if (weightClasses !== undefined) (obj as any).weightClassesStr = JSON.stringify(weightClasses);
+      if (categories !== undefined)    (obj as any).categoriesStr    = JSON.stringify(categories);
+    });
+  }
+}
+
+export async function deleteTemplate(id: string): Promise<void> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('TournamentTemplate', id);
   if (obj) realm.write(() => { realm.delete(obj); });
 }
 

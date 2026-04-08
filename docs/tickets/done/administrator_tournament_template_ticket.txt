@@ -1,0 +1,52 @@
+Priority: 9
+Description: Create an administrator tournament template to facilitate creating tournaments based on predefined structures.
+Resolved: (yes)
+State: (done)
+Criteria of success: Templates for tournaments with structures like weight classes, modalities (katas), and categories (female, male, mixed, children, adults, ranks) are available and customizable.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/tournament-templates.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Execution Plan
+
+### DB layer
+- Add `TournamentTemplate` interface: { id, name, description, modalities: string[], weightClasses: WeightClass[], categories: TemplateCategory[], createdAt, synced }
+- `WeightClass`: { id, label, minKg, maxKg }
+- `TemplateCategory`: { id, name, discipline, gender, ageGroup, rankRange }
+- Store as JSON strings in Realm (nested objects); native JSON in web (AsyncStorage)
+- Add `db:tournament_templates` key
+- CRUD: createTemplate, getAllTemplates, updateTemplate, deleteTemplate
+
+### Screen (app/screens/TournamentTemplatesScreen.tsx)
+- Admin-only via usePermission('manage_tournaments')
+- Add template form: name, description
+- Per-template: add modalities (checkboxes: Kata, Kumite, Gi, etc.)
+- Per-template: add weight classes inline (label, minKg, maxKg)
+- Per-template: add categories (name, discipline, gender, ageGroup)
+- List view: cards with name, modality chips, category count, weight class count
+- Inline edit, delete
+
+### Sidebar
+- Add link to TournamentTemplatesScreen in ADMIN_NAV
+
+### Playwright test (e2e/tournament-templates.spec.ts)
+- Inject admin
+- Add template with name and modalities → verify displayed
+- Edit name → verify
+- Delete → empty state
+
+## Comments
+- Weight classes and categories stored as JSON string in DB for simplicity
+- Modalities are a fixed list: Kata, Kumite, Gi, No-Gi
+- Sidebar needs new entry: 📋 Plantillas → /screens/TournamentTemplatesScreen
+- Add form prefix is `input-new`, edit form prefix is `input-edit`
+- 2 tests passing: admin CRUD + athlete redirect
+
+## Review Notes
+- usePermission('manage_tournaments') guards both the redirect and UI — no hardcoded role checks
+- useAuthGuard() used for session management
+- All styles use KumiteTheme tokens (T.colors.*, T.font.*, T.radius.*, T.shadow.*)
+- DB layer: web (readCollection/writeCollection) and native (Realm + JSON serialization) are fully consistent
+- database.native.ts mirrors all interfaces and CRUD functions from database.web.ts
+- 2/2 Playwright tests passing (admin CRUD + athlete redirect)

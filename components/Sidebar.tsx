@@ -37,6 +37,7 @@ const ADMIN_NAV: NavItem[] = [
   { icon: '🥋', label: 'Artes Marciales',   route: '/screens/MartialArtsScreen',       testId: 'sidebar-martial-arts' },
   { icon: '🏛️', label: 'Organizaciones',    route: '/screens/OrganizationsScreen',     testId: 'sidebar-organizations' },
   { icon: '🏆', label: 'Torneos',           route: '/screens/AdminTournamentsScreen',  testId: 'sidebar-admin-tournaments' },
+  { icon: '📋', label: 'Plantillas',        route: '/screens/TournamentTemplatesScreen', testId: 'sidebar-templates' },
   { icon: '👥', label: 'Usuarios',          route: '/screens/UsersScreen',             testId: 'sidebar-users' },
 ];
 
