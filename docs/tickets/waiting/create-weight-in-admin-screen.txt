@@ -1,0 +1,27 @@
+Priority: 4
+Description: Develop an interface for tournament administrators to manage athlete weigh-ins.
+Resolved: (no)
+State: (waiting)
+Criteria of success: Admins can search athletes, record weigh-in results, mark as meets/lost weight, and entries are final; screen only accessible when tournament status is Weigh-In Open.
+Plan generated: (no)
+Playwright test created: (no)
+Playwright test is passing: (no)
+Unit test created: (no)
+
+Title: Create Tournament Administrator Screen for Weigh-In
+Objective: Develop an interface for tournament administrators to manage athlete weigh-ins.
+Details: Enable administrators to search athletes and record weigh-in results.
+Functionality:
+- Search athletes by name, email, or organization.
+- Display athlete info using the tournament bracket component (name, organization acronym, flag).
+- Click to open a pop-up with target weight and input field for current weight.
+- Mark athlete as "meets weight" or "lost weight in" based on comparison with target.
+- Ensure weight entries are final and cannot be reverted.
+Steps:
+1. Design the search and display interface for athletes.
+2. Implement athlete data display using bracket component.
+3. Create a pop-up for entering and displaying weigh-in results.
+4. Implement logic to evaluate and record weight results.
+Conditions: This screen should only be accessible when the tournament status is "Weigh-In Open."
+
+Acceptance Criteria: Admins can search and manage athlete weigh-ins with accurate and final weight records.

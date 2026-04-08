@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth, RegisterData } from '../../context/AuthContext';
 import { KumiteTheme as T } from '../../constants/theme';
+import { COUNTRIES } from '../../constants/countries';
 
 type Step = 'role' | 'info' | 'details' | 'account';
 type Role = 'athlete' | 'manager';
@@ -191,8 +192,17 @@ export default function OnboardingScreen() {
             </div>
             <div style={s.field}>
               <label style={s.label}>País *</label>
-              <input style={s.input} placeholder="Ej: Costa Rica" value={info.country}
-                onChange={(e: any) => setInfo(p => ({ ...p, country: e.target.value }))} />
+              <select
+                style={s.select}
+                value={info.country}
+                onChange={(e: any) => setInfo(p => ({ ...p, country: e.target.value }))}
+                data-testid="select-country"
+              >
+                <option value="">-- Seleccionar País --</option>
+                {COUNTRIES.map(c => (
+                  <option key={c.code} value={c.name}>{c.flag} {c.name}</option>
+                ))}
+              </select>
             </div>
             <div style={s.field}>
               <label style={s.label}>Edad *</label>

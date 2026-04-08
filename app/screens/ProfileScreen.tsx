@@ -3,6 +3,7 @@ import * as DB from '../../db/database';
 import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { KumiteTheme as T } from '../../constants/theme';
+import { COUNTRIES } from '../../constants/countries';
 
 export default function ProfileScreen() {
   const { currentUser, isLoading } = useAuthGuard();
@@ -161,14 +162,14 @@ export default function ProfileScreen() {
     emptyArts:  { fontSize: 13, color: '#aaa', padding: '8px 0', fontStyle: 'italic' as const },
   };
 
-  const Field = ({ label, k, type = 'text', options }: { label: string; k: string; type?: string; options?: string[] }) => (
+  const Field = ({ label, k, type = 'text', options, optionLabels }: { label: string; k: string; type?: string; options?: string[]; optionLabels?: string[] }) => (
     <div style={s.field}>
       <label style={s.label}>{label}</label>
       {editing ? (
         options ? (
           <select style={s.select} value={(form as any)[k]} onChange={set(k)}>
             <option value="">-- Seleccionar --</option>
-            {options.map(o => <option key={o} value={o}>{o}</option>)}
+            {options.map((o, i) => <option key={o} value={o}>{optionLabels ? optionLabels[i] : o}</option>)}
           </select>
         ) : (
           <input style={s.input} type={type} value={(form as any)[k]} onChange={set(k)} />
@@ -208,7 +209,7 @@ export default function ProfileScreen() {
             <hr style={s.divider} />
             <div className="kb-profile-row" style={s.row}>
               <Field label="Nombre Completo" k="fullName" />
-              <Field label="País"            k="country" />
+              <Field label="País"            k="country" options={COUNTRIES.map(c => c.name)} optionLabels={COUNTRIES.map(c => `${c.flag} ${c.name}`)} />
             </div>
             <div className="kb-profile-row" style={s.row}>
               <Field label="Edad"   k="age"    type="number" />

@@ -1,0 +1,42 @@
+Priority: 1
+Description: Replace country input fields with a dropdown for selecting athlete nationalities.
+Resolved: (no)
+State: (done)
+Criteria of success: Dropdown is functional, user-friendly, and ensures valid nationality selection across all registration and profile forms.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/dropdown-for-nationalities.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+Title: Implement Dropdown for Nationalities
+Objective: Replace input field with a dropdown for selecting athlete nationalities.
+Details: Use a dropdown component to ensure consistent data entry for athlete nationalities.
+Steps:
+1. Identify existing input fields for nationalities.
+2. Integrate dropdown component with a list of available countries.
+3. Ensure data consistency and validation.
+4. Test the dropdown functionality in relevant forms.
+Acceptance Criteria: Dropdown is functional, user-friendly, and ensures valid nationality selection across the app.
+
+## Execution Plan
+
+Files to create/edit:
+- `constants/countries.ts` (create) — COUNTRIES array of { code, name, flag } objects (ISO 3166-1 alpha-2, ~195 countries)
+- `app/screens/OnboardingScreen.tsx` (edit) — replace `<input>` for country with `<select>` using COUNTRIES
+- `app/screens/ProfileScreen.tsx` (edit) — pass COUNTRIES to Field k="country" via options prop
+- `e2e/dropdown-for-nationalities.spec.ts` — tests: OnboardingScreen shows dropdown with countries, ProfileScreen shows dropdown, selected value persisted
+
+Approach:
+- COUNTRIES list ordered alphabetically; flag emoji prepended to name in option label
+- OnboardingScreen uses raw `<select>` (same style as existing inputs)
+- ProfileScreen passes `COUNTRY_NAMES` (string[]) to Field options prop
+
+## Review Notes
+- Created `constants/countries.ts` with 195 ISO 3166-1 alpha-2 countries + emoji flags; `countryFlag()` helper for future use.
+- Stored value is plain country name (backward-compatible with any existing user records).
+- OnboardingScreen: replaced `<input>` with `<select data-testid="select-country">`.
+- ProfileScreen: extended `Field` component with `optionLabels` prop to show "🇯🇵 Japan" labels while storing "Japan".
+- SyncUpScreen: converted country `<input>` to `<select>` (same DOM-manipulation pattern, reads via `document.getElementById`).
+- All 4 Playwright tests pass.
+
+## Comments

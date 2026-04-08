@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { COUNTRIES } from '../../constants/countries';
 
 // Pure DOM manipulation pattern — avoids Expo web hydration issues with Playwright
 export default function SyncUpScreen() {
@@ -36,7 +37,12 @@ export default function SyncUpScreen() {
     <>
       <div style={s.field}><label style={s.label}>{t('syncup.fullName')}</label><input id={`${prefix}-fullName`} style={s.input} placeholder={t('syncup.fullName')} /></div>
       <div style={s.field}><label style={s.label}>{t('syncup.email')}</label><input id={`${prefix}-email`} type="email" style={s.input} placeholder={t('syncup.email')} /></div>
-      <div style={s.field}><label style={s.label}>{t('syncup.country')}</label><input id={`${prefix}-country`} style={s.input} placeholder={t('syncup.country')} /></div>
+      <div style={s.field}><label style={s.label}>{t('syncup.country')}</label>
+        <select id={`${prefix}-country`} style={s.select}>
+          <option value="">-- {t('syncup.country')} --</option>
+          {COUNTRIES.map(c => <option key={c.code} value={c.name}>{c.flag} {c.name}</option>)}
+        </select>
+      </div>
       <div style={s.field}><label style={s.label}>{t('syncup.age')}</label><input id={`${prefix}-age`} type="number" style={s.input} placeholder={t('syncup.age')} /></div>
       <div style={s.field}><label style={s.label}>{t('syncup.gender')}</label>
         <select id={`${prefix}-gender`} style={s.select}>

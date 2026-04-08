@@ -1,0 +1,40 @@
+Priority: 6
+Description: Implement comprehensive end-to-end testing for the full tournament lifecycle workflow using Playwright.
+Resolved: (no)
+State: (waiting)
+Criteria of success: Automated tests run to completion covering all workflow steps and generate readable outputs in video format.
+Plan generated: (no)
+Playwright test created: (no)
+Playwright test is passing: (no)
+Unit test created: (no)
+
+Title: E2E Testing for Playwright
+Objective: Implement End-to-End testing for the application using Playwright, generating a human-readable video for each successful test.
+Details: Perform automated testing through key workflows and ensure they run to completion without issues. If any errors are encountered, utilize the coding agent to resolve them referencing existing tickets and requirements.
+
+Test Steps:
+
+1. Log in as a system admin user.
+2. Generate a new tournament organizer user.
+3. Log out.
+4. Log in as the tournament organizer user.
+5. Create a new tournament using the Kyokushin Kumite weight categories template.
+6. Move the tournament to an open registration status.
+7. Log out.
+8. Create 250 users (accelerated process).
+   - 8.1 Each user should search for and register in the tournament.
+   - 8.2 Users should have diverse nationalities.
+   - 8.3 Many users should edit their registration details or profile information.
+   - 8.4 The tournament should appear on each user's active tournament page.
+9. Log out as each user.
+10. Log in as the tournament organizer and close the registration.
+11. Automatically generate the tournament bracket.
+12. Export the tournament brackets as a PDF.
+13. Create a new user as a tournament admin.
+14. Initiate the weigh-in process.
+15. Log in as the tournament admin.
+16. Mark all participants in the weigh-in process, noting those who made weight.
+   - Participants not making weight should be marked and removed from brackets.
+17. As a tournament admin, export the revised tournament bracket after weigh-ins.
+
+Success Criteria: Automated tests run to completion as expected and generate readable outputs in video format.
