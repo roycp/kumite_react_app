@@ -1,0 +1,27 @@
+Priority: 16
+Description: Generate a tournament bracket view based on each tournament category.
+Resolved: (yes)
+State: (done)
+Criteria of success: Bracket view accurately reflects all categories within the tournament and is dynamically generated to display participants.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/generate-tournament-bracket-view.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Review Notes
+- TournamentBracketScreen uses manage_tournaments permission — consistent with organizer/admin access pattern
+- buildBracket() is a pure function: seeds participants into round-1 matches, pads odd counts with BYE using next power of 2
+- groupByCategory() deduplicates by {discipline, gender, ageGroup} key — matches how registrations store modality data
+- "Ver Bracket" button added to TournamentDashboardScreen lifecycle card (no new screen added to sidebar nav — bracket is a drill-down from dashboard)
+- All 4 tests pass: categories shown, BYE rendered, empty state, athlete redirect
+
+## Execution Plan
+- Create TournamentBracketScreen.tsx (route: /screens/TournamentBracketScreen?tournamentId=...)
+  - Admin/organizer only (manage_tournaments)
+  - Loads registrations for the tournament, groups by category (discipline + gender + ageGroup)
+  - Generates single-elimination bracket matchups for each category
+  - Shows round 1 matches with participant names; BYE for odd counts
+  - Empty state when no registrations
+  - testids: tournament-bracket-screen, bracket-category-{disc-gender-age}, bracket-match-{n}, participant-{name}
+- Add "Ver Bracket" button to TournamentDashboardScreen linking to the bracket screen
+- Playwright test: bracket shows categories with participants, shows BYE for odd count, empty state, organizer redirect check

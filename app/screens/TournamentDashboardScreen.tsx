@@ -235,6 +235,13 @@ export default function TournamentDashboardScreen() {
               >
                 ■ Finalizar Torneo
               </button>
+              <button
+                style={{ padding: '9px 22px', border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, cursor: 'pointer', fontFamily: 'inherit', fontSize: T.font.size.base, background: T.colors.primaryLight, color: T.colors.primary, fontWeight: T.font.weight.bold }}
+                onClick={() => router.push(`/screens/TournamentBracketScreen?tournamentId=${tournament.id}`)}
+                data-testid="btn-view-bracket"
+              >
+                🏆 Ver Bracket
+              </button>
             </div>
           </div>
 

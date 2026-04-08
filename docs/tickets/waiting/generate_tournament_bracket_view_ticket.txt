@@ -1,9 +1,0 @@
-Priority: 16
-Description: Generate a tournament bracket view based on each tournament category.
-Resolved: (no)
-State: (waiting)
-Criteria of success: Bracket view accurately reflects all categories within the tournament and is dynamically generated to display participants.
-Plan generated: (no)
-Playwright test created: (no)
-Playwright test is passing: (no)
-Unit test created: (no)
