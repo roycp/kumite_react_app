@@ -1,0 +1,18 @@
+Priority: 2
+Description: Replace current tournament bracket implementation with g-loot/react-tournament-brackets library.
+Resolved: (no)
+State: (waiting)
+Criteria of success: New bracket system is fully operational and integrated; existing bracket views render correctly with the new library.
+Plan generated: (no)
+Playwright test created: (no)
+Playwright test is passing: (no)
+Unit test created: (no)
+
+Title: Switch Tournament Bracket Library
+Objective: Replace current tournament bracket implementation with g-loot/react-tournament-brackets.
+Details: Integrate the g-loot/react-tournament-brackets for improved functionality.
+Steps:
+1. Install new library.
+2. Replace existing components.
+3. Test and ensure compatibility.
+Acceptance Criteria: New bracket system is fully operational and integrated.

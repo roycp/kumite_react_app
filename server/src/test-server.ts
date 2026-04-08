@@ -8,15 +8,17 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import { Server } from 'http';
 import app from './app';
 import { connectDB, disconnectDB } from './db';
+import { seedAdmin } from './seed';
 
 let mongod: MongoMemoryServer;
 let server: Server;
 let port: number;
 
-export async function startTestServer(listenPort = 0): Promise<string> {
+export async function startTestServer(listenPort = 0, runSeed = false): Promise<string> {
   mongod = await MongoMemoryServer.create();
   const uri = mongod.getUri();
   await connectDB(uri);
+  if (runSeed) await seedAdmin();
 
   await new Promise<void>(resolve => {
     server = app.listen(listenPort, resolve);

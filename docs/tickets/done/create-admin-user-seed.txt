@@ -1,0 +1,49 @@
+Priority: 1
+Description: Automatically create an admin user in MongoDB on server start.
+Resolved: (yes)
+State: (done)
+Criteria of success: Admin user exists in the database on server start; the seed is idempotent (running it twice does not create duplicates).
+Plan generated: (yes)
+Playwright test created: (yes) — e2e/create-admin-user-seed.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+Title: Create Admin User Seed
+Objective: Automatically create an admin user in MongoDB on server start.
+Details: Script to run on node server start to seed admin user.
+Steps:
+1. Create a seed script.
+2. Integrate with server startup.
+3. Secure password.
+Acceptance Criteria: Admin user exists in database on server start.
+
+## Execution Plan
+
+Files to create/edit:
+- `server/src/seed.ts` — seedAdmin() function: checks if admin email exists, creates with bcrypt hash if not (idempotent)
+- `server/src/server.ts` (edit) — call seedAdmin() after connectDB()
+- `server/.env.example` (edit) — add ADMIN_EMAIL and ADMIN_PASSWORD vars
+- `e2e/create-admin-user-seed.spec.ts` — Playwright API test using startTestServer/stopTestServer
+
+Admin credentials from env:
+- ADMIN_EMAIL (default: admin@kumite.app)
+- ADMIN_PASSWORD (default: Admin@1234 — must be changed in production)
+
+Playwright test approach:
+- Start test server (in-memory MongoDB)
+- Verify GET /api/auth/login with admin credentials returns 200 + token
+- Start server a second time (same DB), verify still only one admin user (idempotency)
+
+## Comments
+
+- seedAdmin() uses bcryptjs (same SALT_ROUNDS=12 as auth routes) — consistent hashing
+- Credentials read from ADMIN_EMAIL / ADMIN_PASSWORD env vars with safe defaults
+- test-server.ts extended with optional runSeed param; existing specs unaffected (default false)
+- .env.example updated with JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD
+
+## Review Notes
+
+- Checked: no duplicate hashing logic — seedAdmin() reuses bcryptjs just like auth.ts
+- Checked: idempotency verified by test 3 (seed called twice, count stays 1)
+- Checked: passwordHash excluded from login response (existing auth middleware handles this)
+- All 3 tests pass
