@@ -1,9 +1,0 @@
-Priority: 99
-Description:
-Resolved: (no)
-State: (waiting)
-Criteria of success:
-Plan generated: (no)
-Playwright test created: (no)
-Playwright test is passing: (no)
-Unit test created: (no)

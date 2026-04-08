@@ -1,0 +1,9 @@
+Priority: 99
+Description: (empty placeholder — no work to do)
+Resolved: (yes)
+State: (done)
+Criteria of success: (none — empty ticket)
+Plan generated: (no)
+Playwright test created: (no)
+Playwright test is passing: (no)
+Unit test created: (no)
