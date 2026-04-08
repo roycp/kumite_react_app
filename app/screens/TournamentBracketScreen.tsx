@@ -16,6 +16,7 @@ import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { usePermission } from '../../hooks/usePermission';
 import { KumiteTheme as T } from '../../constants/theme';
 import { groupByCategory, type BracketCategory as Category } from '../../utils/bracketUtils';
+import { BracketParticipantCard } from '../../components/BracketParticipantCard';
 
 // ── Bracket helpers ────────────────────────────────────────────────────────────
 
@@ -75,6 +76,8 @@ const s = {
   catTitle:    { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.primary, marginBottom: 4 },
   catCount:    { fontSize: T.font.size.sm, color: T.colors.muted, marginBottom: 16 },
   bracketWrap: { overflowX: 'auto' as const },
+  rosterRow:   { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderBottom: `1px solid ${T.colors.border}`, fontSize: T.font.size.base },
+  rosterSeed:  { fontSize: T.font.size.sm, color: T.colors.mutedLight, minWidth: 22, fontWeight: T.font.weight.bold, textAlign: 'center' as const },
   empty:       { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
   emptyIcon:   { fontSize: 52, display: 'block', marginBottom: 14 },
   emptyTxt:    { fontSize: T.font.size.xl },
@@ -101,21 +104,23 @@ export default function TournamentBracketScreen() {
   const load = useCallback(async () => {
     if (!tournamentId) return;
     setLoading(true);
-    const [t, regs, seeds] = await Promise.all([
+    const [t, regs, seeds, users] = await Promise.all([
       DB.getTournamentById(tournamentId),
       DB.getRegistrationsByTournamentId(tournamentId),
       DB.getBracketSeeds(tournamentId),
+      DB.getAllUsers(),
     ]);
     setTournament(t);
-    const cats = groupByCategory(regs);
+    const uMap = Object.fromEntries(users.map(u => [u.id, u]));
+    const cats = groupByCategory(regs, uMap);
     // Apply saved seed order when available
     const seeded = cats.map(cat => {
       const savedOrder = seeds[cat.key];
       if (!savedOrder || savedOrder.length === 0) return cat;
       const orderMap = new Map(savedOrder.map((name, i) => [name, i]));
       const sorted = [...cat.participants].sort((a, b) => {
-        const ia = orderMap.has(a) ? orderMap.get(a)! : Infinity;
-        const ib = orderMap.has(b) ? orderMap.get(b)! : Infinity;
+        const ia = orderMap.has(a.name) ? orderMap.get(a.name)! : Infinity;
+        const ib = orderMap.has(b.name) ? orderMap.get(b.name)! : Infinity;
         return ia - ib;
       });
       return { ...cat, participants: sorted };
@@ -155,12 +160,21 @@ export default function TournamentBracketScreen() {
           ) : (
             categories.map(cat => {
               const catTestId = `bracket-category-${cat.key.toLowerCase().replace(/\s+/g, '-')}`;
-              const glootMatches = buildGlootMatches(cat.participants);
+              const glootMatches = buildGlootMatches(cat.participants.map(p => p.name));
               return (
                 <div key={cat.key} style={s.catCard} data-testid={catTestId}>
                   <div style={s.catTitle}>{cat.label}</div>
                   <div style={s.catCount}>
                     {cat.participants.length} participante{cat.participants.length !== 1 ? 's' : ''}
+                  </div>
+                  {/* Participant roster with cards */}
+                  <div style={{ marginBottom: 16 }} data-testid={`participant-roster-${catTestId}`}>
+                    {cat.participants.map((p, idx) => (
+                      <div key={`${p.name}-${idx}`} style={s.rosterRow} data-testid={`roster-row-${catTestId}-${idx}`}>
+                        <span style={s.rosterSeed}>{idx + 1}</span>
+                        <BracketParticipantCard name={p.name} org={p.org} country={p.country} />
+                      </div>
+                    ))}
                   </div>
                   <div style={s.bracketWrap}>
                     <SingleEliminationBracket

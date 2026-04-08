@@ -4,14 +4,27 @@
  */
 import type * as DB from '../db/database';
 
+export interface BracketParticipant {
+  name: string;
+  org?: string;     // academy / organization name
+  country?: string; // country name (e.g. 'Japan') for flag lookup
+}
+
 export interface BracketCategory {
   key: string;      // e.g. 'Kata-Femenino-Adulto'
   label: string;    // e.g. 'Kata — Femenino — Adulto'
-  participants: string[];
+  participants: BracketParticipant[];
 }
 
-export function groupByCategory(registrations: DB.Registration[]): BracketCategory[] {
-  const map: Record<string, string[]> = {};
+/**
+ * Groups registrations into bracket categories.
+ * Optionally accepts a userMap (id → User) to populate country per participant.
+ */
+export function groupByCategory(
+  registrations: DB.Registration[],
+  userMap?: Record<string, DB.User>,
+): BracketCategory[] {
+  const map: Record<string, BracketParticipant[]> = {};
   for (const reg of registrations) {
     for (const entry of (reg.modalities ?? [])) {
       const disc     = entry.discipline || 'Sin disciplina';
@@ -19,7 +32,11 @@ export function groupByCategory(registrations: DB.Registration[]): BracketCatego
       const ageGroup = entry.ageGroup   || 'General';
       const key = `${disc}-${gender}-${ageGroup}`;
       if (!map[key]) map[key] = [];
-      map[key].push(reg.athleteName || 'Atleta');
+      map[key].push({
+        name:    reg.athleteName || 'Atleta',
+        org:     reg.academy     || undefined,
+        country: userMap?.[reg.userId]?.country || undefined,
+      });
     }
   }
   return Object.entries(map)

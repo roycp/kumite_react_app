@@ -1,0 +1,38 @@
+Priority: 3
+Description: Develop a reusable bracket participant card component showing athlete name, organization acronym, and country flag.
+Resolved: (yes)
+State: (done)
+Criteria of success: Component is reusable, displays all required information (name, organization acronym, country flag), and integrates in both admin bracket screen and tournament view.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/create-bracket-view-component.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+Title: Create Single Bracket View Component
+Objective: Develop a reusable component to display single brackets for both admin and tournament views.
+Details: Component should display the athlete name, organization acronym, and the country flag.
+Steps:
+1. Design the bracket component layout.
+2. Implement functionality to display athlete details, organization, and flag.
+3. Ensure compatibility for use in both admin bracket screen and tournament view.
+4. Test the component for different scenarios.
+Acceptance Criteria: Component is reusable, displays all required information, and integrates smoothly in both target views.
+
+## Execution Plan
+
+Files to create/edit:
+- `utils/bracketUtils.ts` — add `BracketParticipant { name, org?, country? }`, change `BracketCategory.participants` to `BracketParticipant[]`, update `groupByCategory` to accept optional `userMap` for country lookup
+- `components/BracketParticipantCard.tsx` (create) — reusable card showing flag + name + org acronym; uses KumiteTheme tokens
+- `app/screens/BracketAdminScreen.tsx` — load users, pass userMap to groupByCategory, use BracketParticipantCard in draggable list; update seed save/apply to use `.name`
+- `app/screens/TournamentBracketScreen.tsx` — load users, pass userMap, update seed apply + buildGlootMatches to extract `.name`, show participant roster per category using BracketParticipantCard
+- `e2e/create-bracket-view-component.spec.ts` — test card renders in BracketAdminScreen with name/org/flag
+
+## Review Notes
+
+- `BracketParticipantCard` uses KumiteTheme tokens for all colors, font sizes, and weights — no hardcoded values.
+- `BracketCategory.participants` changed from `string[]` to `BracketParticipant[]` in `bracketUtils.ts`; both bracket screens updated to use `.name` when passing to g-loot match builder and seed persistence.
+- The card accepts an optional `data-testid` prop forwarded to the outer div to stay backward-compatible with the existing `seed-name-*` testids in `create-admin-bracket-page.spec.ts`.
+- `groupByCategory` now accepts an optional `userMap` for country lookup; existing callers without it still work (country just becomes undefined).
+- All 10 tests pass (6 existing + 4 new).
+
+## Comments

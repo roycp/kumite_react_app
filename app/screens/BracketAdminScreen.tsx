@@ -14,10 +14,11 @@ import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { usePermission } from '../../hooks/usePermission';
 import { KumiteTheme as T } from '../../constants/theme';
 import { groupByCategory, type BracketCategory as Category } from '../../utils/bracketUtils';
+import { BracketParticipantCard } from '../../components/BracketParticipantCard';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function moveItem(arr: string[], from: number, to: number): string[] {
+function moveItem<T>(arr: T[], from: number, to: number): T[] {
   const next = [...arr];
   const [item] = next.splice(from, 1);
   next.splice(to, 0, item);
@@ -75,20 +76,22 @@ export default function BracketAdminScreen() {
   const load = useCallback(async () => {
     if (!tournamentId) return;
     setLoading(true);
-    const [t, regs, seeds] = await Promise.all([
+    const [t, regs, seeds, users] = await Promise.all([
       DB.getTournamentById(tournamentId),
       DB.getRegistrationsByTournamentId(tournamentId),
       DB.getBracketSeeds(tournamentId),
+      DB.getAllUsers(),
     ]);
     setTournament(t);
-    const cats = groupByCategory(regs);
+    const uMap = Object.fromEntries(users.map(u => [u.id, u]));
+    const cats = groupByCategory(regs, uMap);
     const seeded = cats.map(cat => {
       const savedOrder = seeds[cat.key];
       if (!savedOrder || savedOrder.length === 0) return cat;
       const orderMap = new Map(savedOrder.map((name, i) => [name, i]));
       const sorted = [...cat.participants].sort((a, b) => {
-        const ia = orderMap.has(a) ? orderMap.get(a)! : Infinity;
-        const ib = orderMap.has(b) ? orderMap.get(b)! : Infinity;
+        const ia = orderMap.has(a.name) ? orderMap.get(a.name)! : Infinity;
+        const ib = orderMap.has(b.name) ? orderMap.get(b.name)! : Infinity;
         return ia - ib;
       });
       return { ...cat, participants: sorted };
@@ -112,7 +115,7 @@ export default function BracketAdminScreen() {
 
   const handleSave = async () => {
     const seeds: Record<string, string[]> = {};
-    for (const cat of categories) seeds[cat.key] = cat.participants;
+    for (const cat of categories) seeds[cat.key] = cat.participants.map(p => p.name);
     await DB.saveBracketSeeds(tournamentId, seeds);
     setSaved(true);
   };
@@ -169,9 +172,9 @@ export default function BracketAdminScreen() {
                     {cat.participants.length} participante{cat.participants.length !== 1 ? 's' : ''}
                   </div>
 
-                  {cat.participants.map((name, idx) => (
+                  {cat.participants.map((p, idx) => (
                     <div
-                      key={`${name}-${idx}`}
+                      key={`${p.name}-${idx}`}
                       style={s.athleteRow}
                       draggable
                       onDragStart={() => onDragStart(cat.key, idx)}
@@ -180,13 +183,19 @@ export default function BracketAdminScreen() {
                       data-testid={`athlete-seed-row-${catTestId}-${idx}`}
                     >
                       <span style={s.seed}>{idx + 1}</span>
-                      <span style={s.name} data-testid={`seed-name-${catTestId}-${idx}`}>{name}</span>
+                      <BracketParticipantCard
+                        name={p.name}
+                        org={p.org}
+                        country={p.country}
+                        data-testid={`seed-name-${catTestId}-${idx}`}
+                      />
+
                       <button
                         style={s.arrowBtn}
                         disabled={idx === 0}
                         onClick={() => moveParticipant(cat.key, idx, idx - 1)}
                         data-testid={`btn-move-up-${catTestId}-${idx}`}
-                        aria-label={`Mover ${name} arriba`}
+                        aria-label={`Mover ${p.name} arriba`}
                       >
                         ▲
                       </button>
@@ -195,7 +204,7 @@ export default function BracketAdminScreen() {
                         disabled={idx === cat.participants.length - 1}
                         onClick={() => moveParticipant(cat.key, idx, idx + 1)}
                         data-testid={`btn-move-down-${catTestId}-${idx}`}
-                        aria-label={`Mover ${name} abajo`}
+                        aria-label={`Mover ${p.name} abajo`}
                       >
                         ▼
                       </button>
