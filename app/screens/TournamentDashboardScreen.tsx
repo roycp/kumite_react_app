@@ -13,22 +13,9 @@ import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { usePermission } from '../../hooks/usePermission';
 import { KumiteTheme as T } from '../../constants/theme';
+import { STATUS_LABELS, STATUS_COLORS, LIFECYCLE_STATUSES, type TournamentStatus } from '../../constants/tournamentStatus';
 
-type TStatus = DB.Tournament['status'];
-
-const STATUS_LABELS: Record<TStatus, string> = {
-  upcoming:  'Próximo',
-  active:    'Activo',
-  closed:    'Cerrado',
-  cancelled: 'Cancelado',
-};
-
-const STATUS_COLORS: Record<TStatus, { bg: string; text: string }> = {
-  upcoming:  { bg: '#e3f2fd', text: '#1565c0' },
-  active:    { bg: T.colors.successLight, text: T.colors.success },
-  closed:    { bg: T.colors.borderLight, text: T.colors.textSub },
-  cancelled: { bg: T.colors.errorLight, text: T.colors.error },
-};
+type TStatus = TournamentStatus;
 
 const s = {
   page:        { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
@@ -201,7 +188,7 @@ export default function TournamentDashboardScreen() {
           <div style={s.statusCard}>
             <div style={s.infoTitle}>Gestionar Estado</div>
             <div style={s.btnRow}>
-              {(['upcoming', 'active', 'closed', 'cancelled'] as TStatus[]).map(st => (
+              {LIFECYCLE_STATUSES.map(st => (
                 <button
                   key={st}
                   style={s.statusBtn(tournament.status === st)}

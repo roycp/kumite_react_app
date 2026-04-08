@@ -1,0 +1,51 @@
+Priority: 2
+Description: Implement all tournament states across search and active tournament views.
+Resolved: (yes)
+State: (done)
+Criteria of success: All states (Created, Registration Open, Registration Closed, Weigh-In Open, Weigh-In Closed, Tournament Start, Tournament Finish, Cancelled) are visibly integrated and correctly displayed.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/tournament-status-display.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+Title: Ensure Display of Tournament Statuses
+Objective: Implement visibility of tournament states across search and active tournament views.
+Details: Ensure all tournament states are clearly shown in both the tournament search and active tournament views.
+States:
+- Created
+- Registration Open
+- Registration Closed
+- Weigh-In Open
+- Weigh-In Closed
+- Tournament Start
+- Tournament Finish
+- Cancelled
+Steps:
+1. Audit the current status implementation in both views.
+2. Integrate all specified states into both the search and active views.
+3. Validate proper display and transitions of states.
+Acceptance Criteria: All states are visibly integrated and correctly displayed in the specified views.
+
+## Execution Plan
+
+Files to create/edit:
+- `constants/tournamentStatus.ts` (create) — shared STATUS_LABELS, STATUS_COLORS, TOURNAMENT_STATUSES for all 8 new + 3 legacy values
+- `db/database.web.ts` (edit) — expand Tournament.status type union
+- `db/database.native.ts` (edit) — same
+- `app/screens/TournamentSearch.tsx` (edit) — add status badge to each tournament tile
+- `app/screens/TournamentDashboardScreen.tsx` (edit) — import shared constants, show all 8 statuses in management buttons
+- `app/screens/AdminTournamentsScreen.tsx` (edit) — import shared constants
+- `e2e/tournament-status-display.spec.ts` — tests: each new status renders correct label in dashboard and search
+
+New status values: `created`, `registration_open`, `registration_closed`, `weigh_in_open`, `weigh_in_closed`, `tournament_start`, `tournament_finish`, `cancelled`
+Legacy kept: `upcoming` → display as "Próximo", `active` → "Activo", `closed` → "Cerrado"
+
+## Review Notes
+
+- Verified all three status-consuming screens (AdminTournamentsScreen, TournamentDashboardScreen, TournamentSearch) import from `constants/tournamentStatus` — no duplication.
+- AdminTournamentsScreen status dropdown was still hardcoding legacy 4-value options; updated to `LIFECYCLE_STATUSES.map()` for consistency.
+- TournamentSearch `DisplayTournament` interface extended with `status?: TournamentStatus`; badge renders only for DB tournaments (static ones have no status field).
+- All theme tokens used where applicable; inline styles in TournamentSearch preserved (pre-existing pattern).
+- 4 Playwright tests pass covering all 8 new lifecycle statuses in both dashboard and search, plus the 3 legacy statuses.
+
+## Comments

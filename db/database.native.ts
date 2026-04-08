@@ -111,7 +111,7 @@ export interface Tournament {
   location: string;
   logo: string;
   description: string;
-  status: 'upcoming' | 'active' | 'closed' | 'cancelled';
+  status: 'upcoming' | 'active' | 'closed' | 'cancelled' | 'created' | 'registration_open' | 'registration_closed' | 'weigh_in_open' | 'weigh_in_closed' | 'tournament_start' | 'tournament_finish';
   martialArtIds: string[];
   registrationStart: string | null;
   registrationEnd: string | null;

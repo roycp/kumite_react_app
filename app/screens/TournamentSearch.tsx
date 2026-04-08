@@ -5,6 +5,7 @@ import { TOURNAMENTS } from '../../data/tournaments';
 import * as DB from '../../db/database';
 import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
+import { STATUS_LABELS, STATUS_COLORS, type TournamentStatus } from '../../constants/tournamentStatus';
 
 // Returns true if registration is currently open
 // registrationForceOpen overrides date-based logic if not null
@@ -37,6 +38,7 @@ interface DisplayTournament {
   logo: string;
   disciplines: string[];
   source: 'static' | 'db';
+  status?: TournamentStatus;
   registrationStart?: string | null;
   registrationEnd?: string | null;
   registrationForceOpen?: boolean | null;
@@ -73,6 +75,7 @@ export default function TournamentSearch() {
       logo:              t2.logo || '🏆',
       disciplines:       t2.martialArtIds.map(aid => artMap[aid]).filter(Boolean),
       source:            'db',
+      status:            t2.status as TournamentStatus | undefined,
       registrationStart:    t2.registrationStart,
       registrationEnd:      t2.registrationEnd,
       registrationForceOpen: t2.registrationForceOpen,
@@ -132,6 +135,7 @@ export default function TournamentSearch() {
     name:       { fontSize: 16, fontWeight: 700, color: '#1a1a2e', marginBottom: 8 },
     meta:       { fontSize: 13, color: '#666', marginBottom: 4 },
     dbBadge:    { display: 'inline-block', background: '#e8f4fd', color: '#1565c0', borderRadius: 4, padding: '1px 7px', fontSize: 10, fontWeight: 700, marginBottom: 6, letterSpacing: '0.04em' },
+    statusBadge:(status: TournamentStatus) => ({ display: 'inline-block', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700, marginBottom: 6, marginLeft: 4, background: STATUS_COLORS[status].bg, color: STATUS_COLORS[status].text }),
     badge:        { display: 'inline-flex', alignItems: 'center', gap: 5, background: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7', borderRadius: 20, padding: '4px 10px', fontSize: 12, fontWeight: 600, marginTop: 10 },
     closedBadge:  { display: 'inline-flex', alignItems: 'center', gap: 5, background: '#fce8e6', color: '#b3261e', border: '1px solid #f4b8b5', borderRadius: 20, padding: '4px 10px', fontSize: 12, fontWeight: 600, marginTop: 10 },
     btn:          { marginTop: 12, padding: '8px 18px', background: '#6750a4', border: 'none', borderRadius: 20, color: '#fff', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' },
@@ -200,7 +204,10 @@ export default function TournamentSearch() {
                       (e.currentTarget as HTMLElement).style.borderColor = '#efefef';
                     }}
                   >
-                    {t2.source === 'db' && <span style={s.dbBadge}>TORNEO OFICIAL</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginBottom: 2 }}>
+                      {t2.source === 'db' && <span style={s.dbBadge}>TORNEO OFICIAL</span>}
+                      {t2.status && <span data-testid={`tournament-status-badge-${t2.id}`} style={s.statusBadge(t2.status)}>{STATUS_LABELS[t2.status]}</span>}
+                    </div>
                     <span style={s.logo}>{t2.logo}</span>
                     <div style={s.name}>{t2.name}</div>
                     <div style={s.meta}>📅 {t('search.date')}: {t2.date}</div>

@@ -12,24 +12,11 @@ import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { usePermission } from '../../hooks/usePermission';
 import { KumiteTheme as T } from '../../constants/theme';
+import { STATUS_LABELS, STATUS_COLORS, LIFECYCLE_STATUSES, type TournamentStatus } from '../../constants/tournamentStatus';
 
-type TStatus = DB.Tournament['status'];
+type TStatus = TournamentStatus;
 
-const STATUS_LABELS: Record<TStatus, string> = {
-  upcoming:  'Próximo',
-  active:    'Activo',
-  closed:    'Cerrado',
-  cancelled: 'Cancelado',
-};
-
-const STATUS_COLORS: Record<TStatus, { bg: string; text: string }> = {
-  upcoming:  { bg: '#e3f2fd', text: '#1565c0' },
-  active:    { bg: T.colors.successLight, text: T.colors.success },
-  closed:    { bg: T.colors.borderLight, text: T.colors.textSub },
-  cancelled: { bg: T.colors.errorLight, text: T.colors.error },
-};
-
-const EMPTY_FORM = { logo: '🏆', name: '', date: '', location: '', description: '', status: 'upcoming' as TStatus, martialArtIds: [] as string[], registrationStart: '', registrationEnd: '', templateId: '' };
+const EMPTY_FORM = { logo: '🏆', name: '', date: '', location: '', description: '', status: 'created' as TStatus, martialArtIds: [] as string[], registrationStart: '', registrationEnd: '', templateId: '' };
 type FormState = typeof EMPTY_FORM;
 
 const s = {
@@ -142,10 +129,9 @@ export default function AdminTournamentsScreen() {
       <div style={{ ...s.inputWrap, gridColumn: 'span 2' } as any}>
         <label style={s.label}>Estado</label>
         <select style={s.select} value={f.status} onChange={e => set({ ...f, status: val(e) as TStatus })} data-testid={`${prefix}-status`}>
-          <option value="upcoming">Próximo</option>
-          <option value="active">Activo</option>
-          <option value="closed">Cerrado</option>
-          <option value="cancelled">Cancelado</option>
+          {LIFECYCLE_STATUSES.map(st => (
+            <option key={st} value={st}>{STATUS_LABELS[st]}</option>
+          ))}
         </select>
       </div>
       <div style={s.inputWrap}>
