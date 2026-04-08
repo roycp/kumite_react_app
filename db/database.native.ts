@@ -116,6 +116,7 @@ export interface Tournament {
   registrationStart: string | null;
   registrationEnd: string | null;
   registrationForceOpen: boolean | null;
+  templateId: string | null;
   createdAt: string;
   synced: boolean;
 }
@@ -204,6 +205,7 @@ const TournamentSchema: Realm.ObjectSchema = {
     registrationStart:     { type: 'string', default: '' }, // ISO date or ''
     registrationEnd:       { type: 'string', default: '' }, // ISO date or ''
     registrationForceOpen: { type: 'string', default: '' }, // 'true'|'false'|'' (null)
+    templateId:            { type: 'string', default: '' }, // '' = null
     createdAt: 'string', synced: { type: 'bool', default: false },
   },
 };
@@ -339,6 +341,11 @@ export async function addRegistration(data: Omit<Registration, 'id' | 'synced'>)
 export async function getRegistrationsByUserId(userId: string): Promise<Registration[]> {
   const realm = await getRealm();
   return Array.from(realm.objects('Registration').filtered('userId == $0', userId)).map((r: any) => toPlain<Registration>(r));
+}
+
+export async function getRegistrationsByTournamentId(tournamentId: string): Promise<Registration[]> {
+  const realm = await getRealm();
+  return Array.from(realm.objects('Registration').filtered('tournamentId == $0', tournamentId)).map((r: any) => toPlain<Registration>(r));
 }
 
 export async function getRegisteredTournamentIds(userId: string): Promise<string[]> {
@@ -511,13 +518,14 @@ function tournamentFromRealm(t: any): Tournament {
     registrationStart:    plain.registrationStart || null,
     registrationEnd:      plain.registrationEnd   || null,
     registrationForceOpen,
+    templateId:           plain.templateId || null,
   };
 }
 
 export async function createTournament(data: Omit<Tournament, 'id' | 'createdAt' | 'synced'>): Promise<Tournament> {
   const realm = await getRealm();
   let t!: any;
-  const { martialArtIds, registrationStart, registrationEnd, registrationForceOpen, ...rest } = data;
+  const { martialArtIds, registrationStart, registrationEnd, registrationForceOpen, templateId, ...rest } = data;
   realm.write(() => {
     t = realm.create('Tournament', {
       ...rest,
@@ -525,6 +533,7 @@ export async function createTournament(data: Omit<Tournament, 'id' | 'createdAt'
       registrationStart:     registrationStart ?? '',
       registrationEnd:       registrationEnd   ?? '',
       registrationForceOpen: registrationForceOpen == null ? '' : String(registrationForceOpen),
+      templateId:            templateId ?? '',
       id: generateId(), createdAt: new Date().toISOString(), synced: false,
     });
   });
@@ -546,13 +555,14 @@ export async function updateTournament(id: string, updates: Partial<Omit<Tournam
   const realm = await getRealm();
   const obj = realm.objectForPrimaryKey('Tournament', id);
   if (obj) {
-    const { martialArtIds, registrationStart, registrationEnd, registrationForceOpen, ...rest } = updates;
+    const { martialArtIds, registrationStart, registrationEnd, registrationForceOpen, templateId, ...rest } = updates;
     realm.write(() => {
       Object.assign(obj, rest);
       if (martialArtIds !== undefined)         (obj as any).martialArtIdsStr      = martialArtIds.join(',');
       if (registrationStart !== undefined)     (obj as any).registrationStart     = registrationStart ?? '';
       if (registrationEnd   !== undefined)     (obj as any).registrationEnd       = registrationEnd   ?? '';
       if (registrationForceOpen !== undefined) (obj as any).registrationForceOpen = registrationForceOpen == null ? '' : String(registrationForceOpen);
+      if (templateId !== undefined)            (obj as any).templateId            = templateId ?? '';
     });
   }
 }

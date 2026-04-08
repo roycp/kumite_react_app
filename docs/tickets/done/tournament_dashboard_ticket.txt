@@ -1,0 +1,24 @@
+Priority: 13
+Description: Create a Tournament Dashboard administration page.
+Resolved: (yes)
+State: (done)
+Criteria of success: Page displays all users assigned to a specific tournament, categorized by each classification, shows assigned tournament template, and manages tournament status (active, closed, or canceled).
+Plan generated: (yes)
+Playwright test created: (yes) e2e/tournament-dashboard.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Review Notes
+- TournamentDashboardScreen uses usePermission('manage_tournaments') — consistent with other admin screens
+- All colors from KumiteTheme tokens, no hard-coded values
+- getRegistrationsByTournamentId added to both database.web.ts and database.native.ts with consistent style
+- Grouping by discipline is pure in-render computation, no duplication of DB logic
+- All 3 Playwright tests pass: info/template display, status change, athlete redirect to MainScreen
+- No shared component duplication found; status badge pattern is local and appropriate
+
+## Execution Plan
+- Add templateId: string | null to Tournament interface (web + native DB)
+- Add getRegistrationsByTournamentId(id) to database.web.ts and database.native.ts
+- Create TournamentDashboardScreen.tsx: tournament info, status management, registrations by discipline
+- Add "Dashboard" button per card in AdminTournamentsScreen
+- Add template selection to AdminTournamentsScreen form

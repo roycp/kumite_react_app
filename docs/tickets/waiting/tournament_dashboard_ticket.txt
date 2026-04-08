@@ -1,9 +1,0 @@
-Priority: 13
-Description: Create a Tournament Dashboard administration page.
-Resolved: (no)
-State: (waiting)
-Criteria of success: Page displays all users assigned to a specific tournament, categorized by each classification, shows assigned tournament template, and manages tournament status (active, closed, or canceled).
-Plan generated: (no)
-Playwright test created: (no)
-Playwright test is passing: (no)
-Unit test created: (no)

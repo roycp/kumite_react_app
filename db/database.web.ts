@@ -123,7 +123,8 @@ export interface Tournament {
   martialArtIds: string[];
   registrationStart: string | null;
   registrationEnd: string | null;
-  registrationForceOpen: boolean | null; // null=follow schedule, true=force open, false=force closed
+  registrationForceOpen: boolean | null;
+  templateId: string | null;
   createdAt: string;
   synced: boolean;
 }
@@ -254,6 +255,11 @@ export async function addRegistration(data: Omit<Registration, 'id' | 'synced'>)
 export async function getRegistrationsByUserId(userId: string): Promise<Registration[]> {
   const registrations = await readCollection<Registration>(KEYS.REGISTRATIONS);
   return registrations.filter(r => r.userId === userId);
+}
+
+export async function getRegistrationsByTournamentId(tournamentId: string): Promise<Registration[]> {
+  const registrations = await readCollection<Registration>(KEYS.REGISTRATIONS);
+  return registrations.filter(r => r.tournamentId === tournamentId);
 }
 
 /** Returns unique tournament IDs the user is already registered for. */

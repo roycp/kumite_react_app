@@ -29,7 +29,7 @@ const STATUS_COLORS: Record<TStatus, { bg: string; text: string }> = {
   cancelled: { bg: T.colors.errorLight, text: T.colors.error },
 };
 
-const EMPTY_FORM = { logo: '🏆', name: '', date: '', location: '', description: '', status: 'upcoming' as TStatus, martialArtIds: [] as string[], registrationStart: '', registrationEnd: '' };
+const EMPTY_FORM = { logo: '🏆', name: '', date: '', location: '', description: '', status: 'upcoming' as TStatus, martialArtIds: [] as string[], registrationStart: '', registrationEnd: '', templateId: '' };
 type FormState = typeof EMPTY_FORM;
 
 const s = {
@@ -87,6 +87,7 @@ export default function AdminTournamentsScreen() {
 
   const [tournaments, setTournaments] = useState<DB.Tournament[]>([]);
   const [arts, setArts]               = useState<DB.MartialArt[]>([]);
+  const [templates, setTemplates]     = useState<DB.TournamentTemplate[]>([]);
   const [loadingData, setLoading]     = useState(true);
   const [form, setForm]               = useState<FormState>(EMPTY_FORM);
   const [editId, setEditId]           = useState<string | null>(null);
@@ -98,9 +99,10 @@ export default function AdminTournamentsScreen() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [ts, as] = await Promise.all([DB.getAllTournaments(), DB.getAllMartialArts()]);
+    const [ts, as, tpls] = await Promise.all([DB.getAllTournaments(), DB.getAllMartialArts(), DB.getAllTemplates()]);
     setTournaments(ts);
     setArts(as);
+    setTemplates(tpls);
     setLoading(false);
   }, []);
 
@@ -154,6 +156,15 @@ export default function AdminTournamentsScreen() {
         <label style={s.label}>Cierre de Inscripciones</label>
         <input style={s.input} type="date" value={f.registrationEnd} onChange={e => set({ ...f, registrationEnd: val(e) })} data-testid={`${prefix}-reg-end`} />
       </div>
+      {templates.length > 0 && (
+        <div style={{ ...s.inputWrap, gridColumn: 'span 2' } as any}>
+          <label style={s.label}>Plantilla</label>
+          <select style={s.select} value={f.templateId} onChange={e => set({ ...f, templateId: val(e) })} data-testid={`${prefix}-template`}>
+            <option value="">— Sin plantilla —</option>
+            {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </div>
+      )}
       {arts.length > 0 && (
         <div style={{ ...s.inputWrap, gridColumn: 'span 4' } as any}>
           <label style={s.label}>Artes Marciales</label>
@@ -185,9 +196,10 @@ export default function AdminTournamentsScreen() {
       description: form.description.trim(),
       status: form.status,
       martialArtIds: form.martialArtIds,
-      registrationStart:    form.registrationStart || null,
-      registrationEnd:      form.registrationEnd   || null,
+      registrationStart:     form.registrationStart || null,
+      registrationEnd:       form.registrationEnd   || null,
       registrationForceOpen: null,
+      templateId:            form.templateId || null,
     });
     setForm(EMPTY_FORM);
     load();
@@ -195,7 +207,7 @@ export default function AdminTournamentsScreen() {
 
   const startEdit = (t: DB.Tournament) => {
     setEditId(t.id);
-    setEditForm({ logo: t.logo, name: t.name, date: t.date, location: t.location, description: t.description, status: t.status, martialArtIds: t.martialArtIds ?? [], registrationStart: t.registrationStart ?? '', registrationEnd: t.registrationEnd ?? '' });
+    setEditForm({ logo: t.logo, name: t.name, date: t.date, location: t.location, description: t.description, status: t.status, martialArtIds: t.martialArtIds ?? [], registrationStart: t.registrationStart ?? '', registrationEnd: t.registrationEnd ?? '', templateId: t.templateId ?? '' });
   };
 
   const handleEditSave = async () => {
@@ -210,6 +222,7 @@ export default function AdminTournamentsScreen() {
       martialArtIds: editForm.martialArtIds,
       registrationStart: editForm.registrationStart || null,
       registrationEnd:   editForm.registrationEnd   || null,
+      templateId:        editForm.templateId || null,
     });
     setEditId(null);
     load();
@@ -296,6 +309,7 @@ export default function AdminTournamentsScreen() {
                       })()}
                       <div style={s.btnRow}>
                         <button style={s.editBtn}   onClick={() => startEdit(t)} data-testid={`btn-edit-${t.id}`}>Editar</button>
+                        <button style={s.editBtn}   onClick={() => router.push(`/screens/TournamentDashboardScreen?tournamentId=${t.id}` as any)} data-testid={`btn-dashboard-${t.id}`}>Dashboard</button>
                         <button style={s.deleteBtn} onClick={() => DB.deleteTournament(t.id).then(load)} data-testid={`btn-delete-${t.id}`}>Eliminar</button>
                         {t.registrationForceOpen !== true && (
                           <button style={s.openBtn} onClick={() => DB.updateTournament(t.id, { registrationForceOpen: true }).then(load)} data-testid={`btn-reg-open-${t.id}`}>
