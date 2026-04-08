@@ -15,15 +15,17 @@ import { usePermission } from '../../hooks/usePermission';
 import { KumiteTheme as T } from '../../constants/theme';
 
 const ROLE_LABELS: Record<string, string> = {
-  athlete: 'Atleta',
-  manager: 'Manager',
-  admin:   'Administrador',
+  athlete:   'Atleta',
+  manager:   'Manager',
+  admin:     'Administrador',
+  organizer: 'Organizador',
 };
 
 const ROLE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  athlete: { bg: '#e3f2fd', text: '#1565c0', border: '#90caf9' },
-  manager: { bg: '#fff3e0', text: '#e65100', border: '#ffcc02' },
-  admin:   { bg: T.colors.primaryLight, text: T.colors.primary, border: '#c4b5fd' },
+  athlete:   { bg: '#e3f2fd', text: '#1565c0', border: '#90caf9' },
+  manager:   { bg: '#fff3e0', text: '#e65100', border: '#ffcc02' },
+  admin:     { bg: T.colors.primaryLight, text: T.colors.primary, border: '#c4b5fd' },
+  organizer: { bg: '#e8f5e9', text: '#2e7d32', border: '#a5d6a7' },
 };
 
 const s = {
@@ -159,6 +161,7 @@ export default function UsersScreen() {
                       >
                         <option value="athlete">Atleta</option>
                         <option value="manager">Manager</option>
+                        <option value="organizer">Organizador</option>
                         <option value="admin">Administrador</option>
                       </select>
                     ) : (

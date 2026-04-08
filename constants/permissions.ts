@@ -20,7 +20,7 @@ export type Permission =
   | 'manage_tournaments'
   | 'manage_users';
 
-export type UserRole = 'athlete' | 'manager' | 'admin';
+export type UserRole = 'athlete' | 'manager' | 'admin' | 'organizer';
 
 // ── Role → permissions map ────────────────────────────────────────────────────
 
@@ -38,6 +38,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'view_team_history',
     'edit_team_registration',
     'edit_team_profile',
+  ],
+  organizer: [
+    'search_tournament',
+    'manage_tournaments',
+    'edit_own_profile',
   ],
   admin: [
     'search_tournament',

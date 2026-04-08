@@ -1,4 +1,4 @@
-Priority: 15
+Priority: 16
 Description: Generate a tournament bracket view based on each tournament category.
 Resolved: (no)
 State: (waiting)

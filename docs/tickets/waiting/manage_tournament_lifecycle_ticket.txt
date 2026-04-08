@@ -1,4 +1,4 @@
-Priority: 14
+Priority: 15
 Description: Allow tournament organizers to start and end tournaments, ensuring that only ongoing tournaments can be ended.
 Resolved: (no)
 State: (waiting)

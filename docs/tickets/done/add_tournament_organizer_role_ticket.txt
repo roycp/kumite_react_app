@@ -1,0 +1,22 @@
+Priority: 14
+Description: Add a new administration role called 'Tournament Organizer'.
+Resolved: (yes)
+State: (done)
+Criteria of success: The 'Tournament Organizer' role is added with appropriate permissions to manage tournaments effectively.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/add-tournament-organizer-role.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Review Notes
+- `organizer` added to `UserRole` union in constants/permissions.ts and both DB interfaces
+- Permissions granted: search_tournament, manage_tournaments, edit_own_profile — appropriate for tournament management without platform-admin powers
+- UsersScreen updated with organizer label (Organizador), green badge color, and dropdown option — consistent with existing role presentation pattern
+- All 3 tests pass: organizer accesses TournamentManagement, blocked from UsersScreen (redirected), admin assigns role via dropdown
+
+## Execution Plan
+- Add `organizer` to `UserRole` in `constants/permissions.ts`; permissions: search_tournament, manage_tournaments, edit_own_profile
+- Update `DB.User['role']` type in `db/database.web.ts` and `db/database.native.ts`
+- Add organizer label/color to `UsersScreen.tsx` ROLE_LABELS and ROLE_COLORS
+- Add 'organizer' option to the role select dropdown in UsersScreen
+- Write e2e/add-tournament-organizer-role.spec.ts: organizer can access TournamentManagement, cannot access UsersScreen; admin can assign organizer role via UsersScreen
