@@ -1,0 +1,45 @@
+Priority: 19
+Description: Create a Node.js server application to connect to a MongoDB database for data persistence.
+Resolved: (yes)
+State: (review)
+Criteria of success: Node.js application successfully connects and interacts with MongoDB to store and retrieve data efficiently.
+Plan generated: (yes)
+Playwright test created: (yes) — e2e/connect-nodejs-to-mongodb.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Execution Plan
+
+Files to create:
+- `server/package.json` — Node.js server project metadata (express, mongoose, cors, dotenv)
+- `server/src/db.ts` — Mongoose connection logic with configurable MONGO_URI env var
+- `server/src/models/User.ts` — Mongoose User model matching existing User interface
+- `server/src/server.ts` — Express app entry point with graceful startup and health endpoint
+- `server/.env.example` — environment variable template
+- `e2e/connect-nodejs-to-mongodb.spec.ts` — Playwright API test
+
+Playwright test approach:
+- The server exposes GET /health for connectivity check
+- Test uses Playwright request fixture (no browser) to verify server starts and responds
+- Uses mongodb-memory-server for an isolated in-memory MongoDB in tests
+- Tests: health check, list users (GET /api/users), create user (POST /api/users)
+
+## Comments
+
+- Created server/ directory with its own package.json, tsconfig.json
+- server/src/db.ts: connectDB(uri) and disconnectDB() using Mongoose
+- server/src/models/User.ts: Mongoose schema mirroring existing User interface (role: string)
+- server/src/app.ts: Express app with CRUD routes for /api/users and GET /health
+- server/src/server.ts: Entry point with dotenv config, graceful SIGTERM/SIGINT handling
+- server/src/test-server.ts: Test helper using mongodb-memory-server for isolated tests
+- Playwright spec tests: health, GET (empty), POST (create), GET (list), POST duplicate 409, PATCH, DELETE
+- All 7 tests pass; mongodb-memory-server downloads MongoDB binary on first run (~600MB)
+
+## Review Notes
+
+- Checked: passwordHash is excluded from GET /api/users and GET /api/users/:id responses
+- Checked: server types are consistent with existing User interface in database.web.ts
+- Checked: role field is string (matches the refactored type from previous ticket)
+- CORS enabled for all origins — appropriate for development; should be restricted in production
+- Mongoose model uses timestamps option for createdAt; synced field defaults to false
+- All 7 Playwright tests pass with isolated in-memory MongoDB
