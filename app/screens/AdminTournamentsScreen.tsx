@@ -298,7 +298,6 @@ export default function AdminTournamentsScreen() {
                       {/* Registration period override */}
                       {(() => {
                         const fo = t.registrationForceOpen;
-                        const regOpen = fo === true ? true : fo === false ? false : null; // null = follow schedule
                         return (
                           <div style={s.regStatus(fo === true)} data-testid={`reg-status-${t.id}`}>
                             {fo === true  && '🟢 Inscripciones abiertas (manual)'}

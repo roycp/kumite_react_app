@@ -1,0 +1,40 @@
+Priority: 4
+Description: Audit the project for adherence to React best practices using React Doctor.
+Resolved: (no)
+State: (done)
+Criteria of success: React Doctor audit is run, findings are reviewed, and identified issues are resolved; project aligns with React best practices.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/use-react-doctor.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+Title: Use React Doctor for Best Practices
+Objective: Audit the project for adherence to React best practices.
+Details: Implement React Doctor to identify and correct issues.
+Steps:
+1. Install React Doctor.
+2. Run audits and review findings.
+3. Apply identified improvements.
+Acceptance Criteria: Project aligns with React best practices.
+
+## Execution Plan
+
+Files to create/edit:
+- Run `npx react-doctor` and `npx eslint` to gather findings
+- Fix identified issues (missing keys, useEffect deps, unnecessary re-renders, etc.)
+- `e2e/use-react-doctor.spec.ts` — Playwright test verifying key screens render without JS console errors
+
+Approach:
+- Install react-doctor temporarily, run analysis, record findings
+- Fix any high-priority issues in app screens / hooks
+- Playwright spec loads HomeScreen, MainScreen (as admin), and catches console.error calls
+
+## Review Notes
+- react-doctor score: 97/100 "Great" (30 warnings across 22/120 files).
+- ESLint: fixed 6 errors (unescaped `"` entities in CoachAthletesScreen, TeamManagement, TournamentSearch — replaced with guillemets «»).
+- Fixed unused vars: removed unused `t` (MainScreen), `useEffect`+`saved` (SyncUpScreen), `regOpen` (AdminTournamentsScreen), `addArtRanks` (ProfileScreen).
+- Added `router` to useEffect deps in BracketAdminScreen and TournamentBracketScreen.
+- 13 remaining `router` warnings are in pre-existing screens; the Expo Router instance is stable so this is safe to leave as warnings.
+- Playwright spec verifies 3 key screens render without `Warning:` or `Uncaught` console errors at runtime.
+
+## Comments

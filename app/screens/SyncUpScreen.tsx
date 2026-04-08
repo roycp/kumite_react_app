@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -7,8 +7,6 @@ export default function SyncUpScreen() {
   const { t } = useTranslation();
   const [role, setRole] = useState<'athlete' | 'coach' | null>(null);
   const [athleteCount, setAthleteCount] = useState(1);
-  const [saved, setSaved] = useState(false);
-
   const s: any = {
     page:      { minHeight: '100vh', background: '#f5f5f5', padding: 16, fontFamily: 'Roboto, sans-serif' },
     card:      { maxWidth: 760, margin: '0 auto', background: '#fff', borderRadius: 12, padding: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.12)' },
@@ -93,7 +91,6 @@ export default function SyncUpScreen() {
     // Show success via DOM
     const banner = document.getElementById('syncup-success');
     if (banner) banner.style.display = 'block';
-    setSaved(true);
   };
 
   return (
@@ -104,11 +101,11 @@ export default function SyncUpScreen() {
         <div style={s.question}>{t('syncup.question')}</div>
 
         <div style={s.roleGrid}>
-          <div data-testid="btn-athlete" style={s.roleCard(role === 'athlete')} onClick={() => { setRole('athlete'); setSaved(false); }}>
+          <div data-testid="btn-athlete" style={s.roleCard(role === 'athlete')} onClick={() => setRole('athlete')}>
             <span style={s.roleIcon}>🥋</span>
             <span style={s.roleLabel(role === 'athlete')}>{t('syncup.athlete')}</span>
           </div>
-          <div data-testid="btn-coach" style={s.roleCard(role === 'coach')} onClick={() => { setRole('coach'); setSaved(false); }}>
+          <div data-testid="btn-coach" style={s.roleCard(role === 'coach')} onClick={() => setRole('coach')}>
             <span style={s.roleIcon}>🎓</span>
             <span style={s.roleLabel(role === 'coach')}>{t('syncup.coach')}</span>
           </div>

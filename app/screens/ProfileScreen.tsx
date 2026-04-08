@@ -93,7 +93,6 @@ export default function ProfileScreen() {
   };
 
   const unassignedArts = allArts.filter(a => !userRanks.some(r => r.martialArtId === a.id));
-  const addArtRanks    = addArtId ? (artRankMap[addArtId] ?? []) : [];
 
   const loadAddArtRanks = async (artId: string) => {
     setAddArtId(artId);

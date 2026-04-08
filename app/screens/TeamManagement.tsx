@@ -159,7 +159,7 @@ export default function TeamManagement() {
               <div style={s.empty}>
                 <span style={s.emptyIcon}>👥</span>
                 <div style={s.emptyTxt}>No tienes atletas en tu equipo aún</div>
-                <div style={{ fontSize: T.font.size.base, color: T.colors.mutedLight }}>Ve a "Agregar Atleta" para incorporar atletas a tu equipo</div>
+                <div style={{ fontSize: T.font.size.base, color: T.colors.mutedLight }}>Ve a «Agregar Atleta» para incorporar atletas a tu equipo</div>
               </div>
             ) : (
               myAthletes.map(athlete => {

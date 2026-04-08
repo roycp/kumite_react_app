@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
 import * as DB from '../../db/database';
 import { getTournamentById } from '../../data/tournaments';
 import Sidebar from '../../components/Sidebar';
@@ -8,7 +7,6 @@ import { useAuthGuard } from '../../hooks/useAuthGuard';
 
 export default function MainScreen() {
   const router = useRouter();
-  const { t } = useTranslation();
   const { currentUser, isLoading } = useAuthGuard();
 
   const [activeRegs, setActiveRegs] = useState<DB.Registration[]>([]);

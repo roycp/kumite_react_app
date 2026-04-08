@@ -70,7 +70,7 @@ export default function BracketAdminScreen() {
 
   useEffect(() => {
     if (!isLoading && currentUser && !canManage) router.replace('/screens/MainScreen');
-  }, [currentUser, isLoading, canManage]);
+  }, [currentUser, isLoading, canManage, router]);
 
   const load = useCallback(async () => {
     if (!tournamentId) return;

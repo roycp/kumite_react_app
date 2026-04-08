@@ -173,7 +173,7 @@ export default function TournamentSearch() {
 
           {filtered.length === 0 ? (
             <div style={s.noResults}>
-              No se encontraron torneos para "<strong>{query}</strong>"
+              No se encontraron torneos para «<strong>{query}</strong>»
             </div>
           ) : (
             <div className="kb-search-grid" style={s.grid}>

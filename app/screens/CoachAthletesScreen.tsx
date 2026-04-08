@@ -114,7 +114,7 @@ export default function CoachAthletesScreen() {
             <div style={s.empty}>
               <span style={s.emptyIcon}>👥</span>
               <div style={s.emptyTxt}>No tienes atletas asignados aún</div>
-              <div style={s.emptyHint}>Ve a "Asignar Atletas" para agregar atletas a tu equipo</div>
+              <div style={s.emptyHint}>Ve a «Asignar Atletas» para agregar atletas a tu equipo</div>
             </div>
           ) : (
             myAthletes.map(a => (
