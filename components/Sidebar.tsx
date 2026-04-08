@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { useRouter, usePathname } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
+import { hasPermission } from '../constants/permissions';
 
 interface NavItem {
   icon: string;
@@ -56,15 +57,35 @@ interface SidebarProps {
 export default function Sidebar({ children }: SidebarProps) {
   const router   = useRouter();
   const pathname = usePathname();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, roleDefinitions, logout } = useAuth();
 
   const [open, setOpen] = useState(false);
 
+  const role = currentUser?.role ?? '';
+  const canManageUsers        = hasPermission(role, 'manage_users',        roleDefinitions);
+  const canManageTournaments  = hasPermission(role, 'manage_tournaments',  roleDefinitions);
+  const canManageTeam         = hasPermission(role, 'register_team_member', roleDefinitions);
+
   const navItems =
-    currentUser?.role === 'admin'     ? ADMIN_NAV :
-    currentUser?.role === 'organizer' ? ORGANIZER_NAV :
-    currentUser?.role === 'manager'   ? MANAGER_NAV :
+    canManageUsers       ? ADMIN_NAV :
+    canManageTournaments ? ORGANIZER_NAV :
+    canManageTeam        ? MANAGER_NAV :
     ATHLETE_NAV;
+
+  // Display name: prefer custom role definition's displayName, fall back to built-in labels
+  const BUILT_IN_LABELS: Record<string, string> = {
+    admin: 'Administrador', organizer: 'Organizador', manager: 'Manager', athlete: 'Atleta',
+  };
+  const roleDisplayName =
+    roleDefinitions.find(d => d.name === role)?.displayName ??
+    BUILT_IN_LABELS[role] ??
+    role;
+
+  const roleAvatar =
+    canManageUsers       ? '🛡️' :
+    canManageTournaments ? '🏆' :
+    canManageTeam        ? '📋' :
+    '🥋';
 
   const handleLogout = async () => {
     await logout();
@@ -149,6 +170,8 @@ export default function Sidebar({ children }: SidebarProps) {
           <SidebarContent
             currentUser={currentUser}
             navItems={navItems}
+            roleDisplayName={roleDisplayName}
+            roleAvatar={roleAvatar}
             isActive={isActive}
             navigate={navigate}
             handleLogout={handleLogout}
@@ -168,6 +191,8 @@ export default function Sidebar({ children }: SidebarProps) {
           <SidebarContent
             currentUser={currentUser}
             navItems={navItems}
+            roleDisplayName={roleDisplayName}
+            roleAvatar={roleAvatar}
             isActive={isActive}
             navigate={navigate}
             handleLogout={handleLogout}
@@ -186,9 +211,11 @@ export default function Sidebar({ children }: SidebarProps) {
 
 // ── Internal: sidebar contents ────────────────────────────────────────────────
 
-function SidebarContent({ currentUser, navItems, isActive, navigate, handleLogout, s }: {
+function SidebarContent({ currentUser, navItems, roleDisplayName, roleAvatar, isActive, navigate, handleLogout, s }: {
   currentUser: any;
   navItems: NavItem[];
+  roleDisplayName: string;
+  roleAvatar: string;
   isActive: (r: string) => boolean;
   navigate: (r: string) => void;
   handleLogout: () => void;
@@ -198,13 +225,9 @@ function SidebarContent({ currentUser, navItems, isActive, navigate, handleLogou
     <>
       {/* User badge */}
       <div style={s.sbHeader}>
-        <div style={s.sbAvatar}>
-          {currentUser?.role === 'admin' ? '🛡️' : currentUser?.role === 'organizer' ? '🏆' : currentUser?.role === 'manager' ? '📋' : '🥋'}
-        </div>
+        <div style={s.sbAvatar}>{roleAvatar}</div>
         <div style={s.sbName}>{currentUser?.fullName ?? 'Usuario'}</div>
-        <div style={s.sbEmail}>
-          {currentUser?.role === 'admin' ? 'Administrador' : currentUser?.role === 'organizer' ? 'Organizador' : currentUser?.role === 'manager' ? 'Manager' : 'Atleta'}
-        </div>
+        <div style={s.sbEmail}>{roleDisplayName}</div>
       </div>
 
       {/* Nav */}

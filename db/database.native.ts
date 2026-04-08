@@ -13,7 +13,7 @@ export interface User {
   id: string;
   email: string;
   passwordHash: string;
-  role: 'athlete' | 'manager' | 'admin' | 'organizer';
+  role: string;
   fullName: string;
   country: string;
   age: string;

@@ -1,4 +1,4 @@
-Priority: 21
+Priority: 20
 Description: Create RESTful endpoints to persist necessary information into MongoDB.
 Resolved: (no)
 State: (waiting)

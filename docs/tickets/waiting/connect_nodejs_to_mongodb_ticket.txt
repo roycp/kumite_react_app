@@ -1,4 +1,4 @@
-Priority: 20
+Priority: 19
 Description: Create a Node.js server application to connect to a MongoDB database for data persistence.
 Resolved: (no)
 State: (waiting)

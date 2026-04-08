@@ -6,7 +6,7 @@ import * as DB from '../db/database';
 export interface RegisterData {
   email: string;
   password: string;
-  role: 'athlete' | 'manager' | 'admin';
+  role: string;
   fullName: string;
   country: string;
   age: string;
@@ -24,6 +24,8 @@ interface AuthResult {
 interface AuthContextType {
   currentUser: DB.User | null;
   isLoading: boolean;
+  roleDefinitions: DB.RoleDefinition[];
+  reloadRoleDefinitions: () => Promise<void>;
   login: (email: string, password: string) => Promise<AuthResult>;
   register: (data: RegisterData) => Promise<AuthResult>;
   logout: () => Promise<void>;
@@ -34,6 +36,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   currentUser: null,
   isLoading: true,
+  roleDefinitions: [],
+  reloadRoleDefinitions: async () => {},
   login: async () => ({ success: false }),
   register: async () => ({ success: false }),
   logout: async () => {},
@@ -44,16 +48,24 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<DB.User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [roleDefinitions, setRoleDefinitions] = useState<DB.RoleDefinition[]>([]);
 
-  // Restore session on app start
+  const reloadRoleDefinitions = async () => {
+    const defs = await DB.getAllRoleDefinitions();
+    setRoleDefinitions(defs);
+  };
+
+  // Restore session and load role definitions on app start
   useEffect(() => {
-    DB.getSessionUserId().then(async userId => {
-      if (userId) {
-        const user = await DB.getUserById(userId);
-        setCurrentUser(user);
-      }
-      setIsLoading(false);
-    });
+    Promise.all([
+      DB.getSessionUserId().then(async userId => {
+        if (userId) {
+          const user = await DB.getUserById(userId);
+          setCurrentUser(user);
+        }
+      }),
+      reloadRoleDefinitions(),
+    ]).then(() => setIsLoading(false));
   }, []);
 
   const login = async (email: string, password: string): Promise<AuthResult> => {
@@ -100,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ currentUser, isLoading, roleDefinitions, reloadRoleDefinitions, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

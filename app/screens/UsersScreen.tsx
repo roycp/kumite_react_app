@@ -66,15 +66,23 @@ const s = {
   loading:   { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
 } as const;
 
+const BUILT_IN_ROLES = [
+  { name: 'athlete',   displayName: 'Atleta' },
+  { name: 'manager',   displayName: 'Manager' },
+  { name: 'organizer', displayName: 'Organizador' },
+  { name: 'admin',     displayName: 'Administrador' },
+];
+
 export default function UsersScreen() {
   const router = useRouter();
   const { currentUser, isLoading } = useAuthGuard();
   const canManage = usePermission('manage_users');
 
-  const [users, setUsers]         = useState<DB.User[]>([]);
-  const [loadingData, setLoading] = useState(true);
-  const [editId, setEditId]       = useState<string | null>(null);
-  const [editRole, setEditRole]   = useState<string>('athlete');
+  const [users, setUsers]               = useState<DB.User[]>([]);
+  const [customRoles, setCustomRoles]   = useState<DB.RoleDefinition[]>([]);
+  const [loadingData, setLoading]       = useState(true);
+  const [editId, setEditId]             = useState<string | null>(null);
+  const [editRole, setEditRole]         = useState<string>('athlete');
 
   useEffect(() => {
     if (!isLoading && currentUser && !canManage) router.replace('/screens/MainScreen');
@@ -82,8 +90,9 @@ export default function UsersScreen() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await DB.getAllUsers();
+    const [data, defs] = await Promise.all([DB.getAllUsers(), DB.getAllRoleDefinitions()]);
     setUsers(data);
+    setCustomRoles(defs);
     setLoading(false);
   }, []);
 
@@ -96,7 +105,7 @@ export default function UsersScreen() {
 
   const handleSave = async () => {
     if (!editId) return;
-    await DB.updateUser(editId, { role: editRole as DB.User['role'] });
+    await DB.updateUser(editId, { role: editRole });
     setEditId(null);
     load();
   };
@@ -159,10 +168,12 @@ export default function UsersScreen() {
                         onChange={e => setEditRole((e.target as HTMLSelectElement).value)}
                         data-testid="input-edit-role"
                       >
-                        <option value="athlete">Atleta</option>
-                        <option value="manager">Manager</option>
-                        <option value="organizer">Organizador</option>
-                        <option value="admin">Administrador</option>
+                        {BUILT_IN_ROLES.map(r => (
+                          <option key={r.name} value={r.name}>{r.displayName}</option>
+                        ))}
+                        {customRoles.map(r => (
+                          <option key={r.id} value={r.name} data-testid={`role-option-${r.name}`}>{r.displayName}</option>
+                        ))}
                       </select>
                     ) : (
                       <span style={s.roleBadge(u.role)} data-testid={`user-role-${u.id}`}>

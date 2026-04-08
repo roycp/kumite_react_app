@@ -1,0 +1,50 @@
+Priority: 18
+Description: Refactor the application to utilize the new role system managed through the role administrator page, replacing the previous hardcoded role systems.
+Resolved: (yes)
+State: (done)
+Criteria of success: Application fully leverages the new role administrator system, enhancing maintainability and adaptability.
+Plan generated: (yes)
+Playwright test created: (yes) — e2e/refactor-role-system.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Execution Plan
+
+Files to create or edit:
+- `constants/permissions.ts` — update `hasPermission()` to accept an optional `RoleDefinition[]` param; look up the role in custom defs first, fall back to static map if not found
+- `context/AuthContext.tsx` — add `roleDefinitions: DB.RoleDefinition[]` to context; load from DB on init; expose in provider value
+- `hooks/usePermission.ts` — pass `roleDefinitions` from AuthContext to `hasPermission()` so dynamic DB roles are used
+- `db/database.web.ts` — change `User.role` type from literal union to `string`
+- `db/database.native.ts` — same `User.role` type change
+- `app/screens/UsersScreen.tsx` — load custom role defs from DB; populate role select with built-in + custom roles
+- `e2e/refactor-role-system.spec.ts` — create Playwright test
+
+DB schema changes:
+- `User.role` widened from `'athlete' | 'manager' | 'admin' | 'organizer'` to `string`
+
+UI components:
+- UsersScreen role-edit dropdown extended with custom roles from DB
+
+Playwright test approach:
+- Inject admin user + a custom role definition in localStorage
+- Log in as admin, navigate to RoleAdminScreen, verify custom role is visible
+- Navigate to UsersScreen, verify custom role appears in dropdown
+- Assign custom role to a user, save, verify badge shows custom role name
+- Re-login as the user with the custom role, verify permission-gated content is accessible/inaccessible appropriately
+
+## Comments
+
+- User.role widened to `string` in both database.web.ts and database.native.ts
+- AuthContext now loads RoleDefinition[] from DB on init and exposes via `roleDefinitions` + `reloadRoleDefinitions`
+- hasPermission() in constants/permissions.ts accepts optional `roleDefs` param; checks dynamic defs first, falls back to static ROLE_PERMISSIONS
+- usePermission() passes roleDefinitions from AuthContext to hasPermission()
+- UsersScreen loads custom role defs from DB and includes them in the role-edit dropdown alongside built-in roles
+- RegisterData.role widened to `string` to allow custom role assignment at registration
+
+## Review Notes
+
+- Checked: no duplicated permission logic — all screens use `usePermission()` hook consistently
+- Checked: `db/database.web.ts` and `db/database.native.ts` both updated for `User.role: string`
+- Found and fixed: Sidebar was using hardcoded role name comparisons for nav selection and avatar/label display. Updated to use `hasPermission()` with dynamic roleDefs so custom roles get correct navigation and display name
+- Theme tokens used throughout — no hardcoded values introduced
+- All 4 Playwright tests pass after Sidebar update

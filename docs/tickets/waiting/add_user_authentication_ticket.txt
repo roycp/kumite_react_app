@@ -1,4 +1,4 @@
-Priority: 19
+Priority: 21
 Description: Implement a user authentication system similar to Devise to create user accounts and safely persist passwords.
 Resolved: (no)
 State: (waiting)

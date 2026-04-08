@@ -79,6 +79,24 @@ export const ALL_PERMISSIONS: Permission[] = [
   'manage_users',
 ];
 
-export function hasPermission(role: string, permission: Permission): boolean {
+export interface DynamicRoleDef {
+  name: string;
+  permissions: string[];
+}
+
+/**
+ * Check if a role has a given permission.
+ * When `roleDefs` is provided (loaded from the DB), it is consulted first.
+ * Falls back to the static ROLE_PERMISSIONS map for built-in roles.
+ */
+export function hasPermission(
+  role: string,
+  permission: Permission,
+  roleDefs?: DynamicRoleDef[],
+): boolean {
+  if (roleDefs && roleDefs.length > 0) {
+    const def = roleDefs.find(d => d.name === role);
+    if (def) return def.permissions.includes(permission);
+  }
   return (ROLE_PERMISSIONS[role as UserRole] ?? []).includes(permission);
 }
