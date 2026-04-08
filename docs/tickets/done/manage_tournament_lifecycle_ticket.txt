@@ -1,0 +1,23 @@
+Priority: 15
+Description: Allow tournament organizers to start and end tournaments, ensuring that only ongoing tournaments can be ended.
+Resolved: (yes)
+State: (done)
+Criteria of success: Tournament organizers have control over starting and ending tournaments. Tournaments can only be ended if they are already in progress.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/manage-tournament-lifecycle.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Review Notes
+- Lifecycle controls added to TournamentDashboardScreen which organizers already access via manage_tournaments permission
+- btn-start-tournament only rendered when status === 'upcoming' (not just disabled) — clean UX
+- btn-end-tournament always rendered but disabled when not active, enforcing the "only ongoing can be ended" constraint
+- changeStatus() reused for both lifecycle and status-management buttons — no duplicated logic
+- All 3 tests pass: start upcoming, end active, end disabled for upcoming
+
+## Execution Plan
+- Add a "Lifecycle Actions" card to TournamentDashboardScreen with:
+  - btn-start-tournament: enabled only when status === 'upcoming', sets to 'active'
+  - btn-end-tournament: always visible, disabled when status !== 'active', sets to 'closed'
+- Organizer already has manage_tournaments permission from ticket #14, so no permission change needed
+- Playwright test: organizer starts upcoming tournament, organizer ends active tournament, end button disabled on upcoming tournament

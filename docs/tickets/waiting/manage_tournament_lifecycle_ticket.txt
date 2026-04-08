@@ -1,9 +1,0 @@
-Priority: 15
-Description: Allow tournament organizers to start and end tournaments, ensuring that only ongoing tournaments can be ended.
-Resolved: (no)
-State: (waiting)
-Criteria of success: Tournament organizers have control over starting and ending tournaments. Tournaments can only be ended if they are already in progress.
-Plan generated: (no)
-Playwright test created: (no)
-Playwright test is passing: (no)
-Unit test created: (no)

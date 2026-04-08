@@ -58,6 +58,18 @@ const s = {
     fontWeight: active ? T.font.weight.bold : T.font.weight.normal,
   }),
 
+  lifecycleCard: { background: T.colors.card, borderRadius: T.radius.lg, padding: '20px 24px', marginBottom: 20, boxShadow: T.shadow.card },
+  lcBtnRow:    { display: 'flex', gap: 12, flexWrap: 'wrap' as const, marginTop: 12 },
+  startBtn:    { padding: '9px 22px', border: 'none', borderRadius: T.radius.xl, cursor: 'pointer', fontFamily: 'inherit', fontSize: T.font.size.base, background: T.colors.success, color: '#fff', fontWeight: T.font.weight.bold },
+  endBtn:      (enabled: boolean) => ({
+    padding: '9px 22px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl,
+    cursor: enabled ? 'pointer' : 'not-allowed', fontFamily: 'inherit', fontSize: T.font.size.base,
+    background: enabled ? T.colors.error : T.colors.borderLight,
+    color: enabled ? '#fff' : T.colors.mutedLight,
+    fontWeight: T.font.weight.bold,
+    opacity: enabled ? 1 : 0.5,
+  }),
+
   regCard:     { background: T.colors.card, borderRadius: T.radius.lg, padding: '20px 24px', marginBottom: 20, boxShadow: T.shadow.card },
   regTitle:    { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
   discipline:  { marginBottom: 16 },
@@ -199,6 +211,30 @@ export default function TournamentDashboardScreen() {
                   {STATUS_LABELS[st]}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Lifecycle actions */}
+          <div style={s.lifecycleCard}>
+            <div style={s.infoTitle}>Acciones del Torneo</div>
+            <div style={s.lcBtnRow}>
+              {tournament.status === 'upcoming' && (
+                <button
+                  style={s.startBtn}
+                  onClick={() => changeStatus('active')}
+                  data-testid="btn-start-tournament"
+                >
+                  ▶ Iniciar Torneo
+                </button>
+              )}
+              <button
+                style={s.endBtn(tournament.status === 'active')}
+                disabled={tournament.status !== 'active'}
+                onClick={() => { if (tournament.status === 'active') changeStatus('closed'); }}
+                data-testid="btn-end-tournament"
+              >
+                ■ Finalizar Torneo
+              </button>
             </div>
           </div>
 
