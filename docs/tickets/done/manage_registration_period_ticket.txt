@@ -1,0 +1,27 @@
+Priority: 12
+Description: Implement functionality to manually open or close the registration period for tournaments.
+Resolved: (yes)
+State: (done)
+Criteria of success: Users can manually control the opening and closing of tournament registration periods beyond scheduled dates.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/manage-registration-period.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Execution Plan
+- Add `registrationForceOpen: boolean | null` to Tournament interface (web + native DB)
+  - null = follow date-based logic
+  - true = force open regardless of dates
+  - false = force closed regardless of dates
+- Update isRegistrationOpen() in TournamentSearch to check forceOpen first
+- Add open/close toggle buttons per tournament card in AdminTournamentsScreen
+
+## Comments
+- boolean | null field avoids polluting status; null = "follow schedule"
+- Toggle in admin updates only the registrationForceOpen field via updateTournament
+## Review Notes
+- registrationForceOpen: boolean | null stored in both DB layers
+- Native Realm stores as string 'true'|'false'|'' and deserializes back to boolean|null
+- isRegistrationOpen() checks forceOpen first, then falls back to date logic
+- AdminTournamentsScreen shows per-card toggle buttons: Open, Close, Auto (only relevant ones shown)
+- 2/2 Playwright tests passing

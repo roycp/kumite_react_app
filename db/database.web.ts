@@ -123,6 +123,7 @@ export interface Tournament {
   martialArtIds: string[];
   registrationStart: string | null;
   registrationEnd: string | null;
+  registrationForceOpen: boolean | null; // null=follow schedule, true=force open, false=force closed
   createdAt: string;
   synced: boolean;
 }

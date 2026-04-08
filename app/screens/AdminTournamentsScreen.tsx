@@ -62,9 +62,12 @@ const s = {
     fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold,
     background: STATUS_COLORS[status].bg, color: STATUS_COLORS[status].text, marginBottom: 10,
   }),
-  btnRow:     { display: 'flex', gap: 8 },
+  btnRow:     { display: 'flex', gap: 8, flexWrap: 'wrap' as const },
   editBtn:    { padding: '5px 14px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
   deleteBtn:  { padding: '5px 14px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
+  openBtn:    { padding: '5px 14px', background: '#e8f5e9', border: '1px solid #66bb6a', borderRadius: T.radius.xl, color: '#2e7d32', fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
+  closeBtn:   { padding: '5px 14px', background: '#fce8e6', border: '1px solid #ef9a9a', borderRadius: T.radius.xl, color: '#b3261e', fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
+  regStatus:  (open: boolean) => ({ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: open ? '#2e7d32' : '#b3261e', marginBottom: 8 }),
 
   artBadges:  { display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 8 },
   artBadge:   { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: T.colors.borderLight, borderRadius: T.radius.pill, fontSize: T.font.size.sm, color: T.colors.textSub },
@@ -182,8 +185,9 @@ export default function AdminTournamentsScreen() {
       description: form.description.trim(),
       status: form.status,
       martialArtIds: form.martialArtIds,
-      registrationStart: form.registrationStart || null,
-      registrationEnd:   form.registrationEnd   || null,
+      registrationStart:    form.registrationStart || null,
+      registrationEnd:      form.registrationEnd   || null,
+      registrationForceOpen: null,
     });
     setForm(EMPTY_FORM);
     load();
@@ -278,9 +282,36 @@ export default function AdminTournamentsScreen() {
                         </div>
                       )}
                       <div style={s.statusBadge(t.status)} data-testid={`tournament-status-${t.id}`}>{STATUS_LABELS[t.status]}</div>
+                      {/* Registration period override */}
+                      {(() => {
+                        const fo = t.registrationForceOpen;
+                        const regOpen = fo === true ? true : fo === false ? false : null; // null = follow schedule
+                        return (
+                          <div style={s.regStatus(fo === true)} data-testid={`reg-status-${t.id}`}>
+                            {fo === true  && '🟢 Inscripciones abiertas (manual)'}
+                            {fo === false && '🔴 Inscripciones cerradas (manual)'}
+                            {fo == null   && '🔵 Inscripciones: modo automático'}
+                          </div>
+                        );
+                      })()}
                       <div style={s.btnRow}>
                         <button style={s.editBtn}   onClick={() => startEdit(t)} data-testid={`btn-edit-${t.id}`}>Editar</button>
                         <button style={s.deleteBtn} onClick={() => DB.deleteTournament(t.id).then(load)} data-testid={`btn-delete-${t.id}`}>Eliminar</button>
+                        {t.registrationForceOpen !== true && (
+                          <button style={s.openBtn} onClick={() => DB.updateTournament(t.id, { registrationForceOpen: true }).then(load)} data-testid={`btn-reg-open-${t.id}`}>
+                            🔓 Abrir Inscripciones
+                          </button>
+                        )}
+                        {t.registrationForceOpen !== false && (
+                          <button style={s.closeBtn} onClick={() => DB.updateTournament(t.id, { registrationForceOpen: false }).then(load)} data-testid={`btn-reg-close-${t.id}`}>
+                            🔒 Cerrar Inscripciones
+                          </button>
+                        )}
+                        {t.registrationForceOpen != null && (
+                          <button style={s.btnGhost} onClick={() => DB.updateTournament(t.id, { registrationForceOpen: null }).then(load)} data-testid={`btn-reg-auto-${t.id}`}>
+                            🔵 Modo automático
+                          </button>
+                        )}
                       </div>
                     </>
                   )}

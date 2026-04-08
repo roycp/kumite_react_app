@@ -1,9 +1,0 @@
-Priority: 12
-Description: Implement functionality to manually open or close the registration period for tournaments.
-Resolved: (no)
-State: (waiting)
-Criteria of success: Users can manually control the opening and closing of tournament registration periods beyond scheduled dates.
-Plan generated: (no)
-Playwright test created: (no)
-Playwright test is passing: (no)
-Unit test created: (no)

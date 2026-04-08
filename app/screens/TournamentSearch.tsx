@@ -6,8 +6,15 @@ import * as DB from '../../db/database';
 import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 
-// Returns true if registration is currently open (null dates = no restriction)
-function isRegistrationOpen(registrationStart: string | null | undefined, registrationEnd: string | null | undefined): boolean {
+// Returns true if registration is currently open
+// registrationForceOpen overrides date-based logic if not null
+function isRegistrationOpen(
+  registrationStart: string | null | undefined,
+  registrationEnd: string | null | undefined,
+  registrationForceOpen?: boolean | null,
+): boolean {
+  if (registrationForceOpen === true)  return true;
+  if (registrationForceOpen === false) return false;
   const now = new Date();
   if (registrationStart) {
     const start = new Date(registrationStart);
@@ -32,6 +39,7 @@ interface DisplayTournament {
   source: 'static' | 'db';
   registrationStart?: string | null;
   registrationEnd?: string | null;
+  registrationForceOpen?: boolean | null;
 }
 
 export default function TournamentSearch() {
@@ -65,8 +73,9 @@ export default function TournamentSearch() {
       logo:              t2.logo || '🏆',
       disciplines:       t2.martialArtIds.map(aid => artMap[aid]).filter(Boolean),
       source:            'db',
-      registrationStart: t2.registrationStart,
-      registrationEnd:   t2.registrationEnd,
+      registrationStart:    t2.registrationStart,
+      registrationEnd:      t2.registrationEnd,
+      registrationForceOpen: t2.registrationForceOpen,
     })));
   }, [currentUser]);
 
@@ -171,7 +180,7 @@ export default function TournamentSearch() {
               {filtered.map(t2 => {
                 const enrolled   = registeredIds.includes(t2.id);
                 const regOpen    = t2.source === 'db'
-                  ? isRegistrationOpen(t2.registrationStart, t2.registrationEnd)
+                  ? isRegistrationOpen(t2.registrationStart, t2.registrationEnd, t2.registrationForceOpen)
                   : true; // static tournaments have no period restriction
                 const canClick   = !enrolled && regOpen;
                 return (

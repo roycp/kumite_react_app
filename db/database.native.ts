@@ -115,6 +115,7 @@ export interface Tournament {
   martialArtIds: string[];
   registrationStart: string | null;
   registrationEnd: string | null;
+  registrationForceOpen: boolean | null;
   createdAt: string;
   synced: boolean;
 }
@@ -199,9 +200,10 @@ const TournamentSchema: Realm.ObjectSchema = {
   properties: {
     id: 'string', name: 'string', date: 'string', location: 'string',
     logo: 'string', description: 'string', status: 'string',
-    martialArtIdsStr:   { type: 'string', default: '' }, // comma-separated IDs
-    registrationStart:  { type: 'string', default: '' }, // ISO date or ''
-    registrationEnd:    { type: 'string', default: '' }, // ISO date or ''
+    martialArtIdsStr:      { type: 'string', default: '' }, // comma-separated IDs
+    registrationStart:     { type: 'string', default: '' }, // ISO date or ''
+    registrationEnd:       { type: 'string', default: '' }, // ISO date or ''
+    registrationForceOpen: { type: 'string', default: '' }, // 'true'|'false'|'' (null)
     createdAt: 'string', synced: { type: 'bool', default: false },
   },
 };
@@ -500,24 +502,29 @@ export async function deleteTemplate(id: string): Promise<void> {
 
 function tournamentFromRealm(t: any): Tournament {
   const plain = toPlain<any>(t);
+  let registrationForceOpen: boolean | null = null;
+  if (plain.registrationForceOpen === 'true')  registrationForceOpen = true;
+  if (plain.registrationForceOpen === 'false') registrationForceOpen = false;
   return {
     ...plain,
-    martialArtIds:     plain.martialArtIdsStr ? plain.martialArtIdsStr.split(',').filter(Boolean) : [],
-    registrationStart: plain.registrationStart || null,
-    registrationEnd:   plain.registrationEnd   || null,
+    martialArtIds:        plain.martialArtIdsStr ? plain.martialArtIdsStr.split(',').filter(Boolean) : [],
+    registrationStart:    plain.registrationStart || null,
+    registrationEnd:      plain.registrationEnd   || null,
+    registrationForceOpen,
   };
 }
 
 export async function createTournament(data: Omit<Tournament, 'id' | 'createdAt' | 'synced'>): Promise<Tournament> {
   const realm = await getRealm();
   let t!: any;
-  const { martialArtIds, registrationStart, registrationEnd, ...rest } = data;
+  const { martialArtIds, registrationStart, registrationEnd, registrationForceOpen, ...rest } = data;
   realm.write(() => {
     t = realm.create('Tournament', {
       ...rest,
-      martialArtIdsStr:   (martialArtIds ?? []).join(','),
-      registrationStart:  registrationStart ?? '',
-      registrationEnd:    registrationEnd   ?? '',
+      martialArtIdsStr:      (martialArtIds ?? []).join(','),
+      registrationStart:     registrationStart ?? '',
+      registrationEnd:       registrationEnd   ?? '',
+      registrationForceOpen: registrationForceOpen == null ? '' : String(registrationForceOpen),
       id: generateId(), createdAt: new Date().toISOString(), synced: false,
     });
   });
@@ -539,12 +546,13 @@ export async function updateTournament(id: string, updates: Partial<Omit<Tournam
   const realm = await getRealm();
   const obj = realm.objectForPrimaryKey('Tournament', id);
   if (obj) {
-    const { martialArtIds, registrationStart, registrationEnd, ...rest } = updates;
+    const { martialArtIds, registrationStart, registrationEnd, registrationForceOpen, ...rest } = updates;
     realm.write(() => {
       Object.assign(obj, rest);
-      if (martialArtIds !== undefined)    (obj as any).martialArtIdsStr  = martialArtIds.join(',');
-      if (registrationStart !== undefined)(obj as any).registrationStart = registrationStart ?? '';
-      if (registrationEnd   !== undefined)(obj as any).registrationEnd   = registrationEnd   ?? '';
+      if (martialArtIds !== undefined)         (obj as any).martialArtIdsStr      = martialArtIds.join(',');
+      if (registrationStart !== undefined)     (obj as any).registrationStart     = registrationStart ?? '';
+      if (registrationEnd   !== undefined)     (obj as any).registrationEnd       = registrationEnd   ?? '';
+      if (registrationForceOpen !== undefined) (obj as any).registrationForceOpen = registrationForceOpen == null ? '' : String(registrationForceOpen);
     });
   }
 }
