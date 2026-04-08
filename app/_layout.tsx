@@ -7,6 +7,7 @@ import '../i18n'; // Initialize i18n (Spanish default)
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '../context/AuthContext';
+import { ThemeProvider as KumiteThemeProvider } from '../context/ThemeContext';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -14,6 +15,7 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
+      <KumiteThemeProvider>
       <PaperProvider theme={paperTheme}>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack>
@@ -34,6 +36,7 @@ export default function RootLayout() {
           <StatusBar style="auto" />
         </ThemeProvider>
       </PaperProvider>
+      </KumiteThemeProvider>
     </AuthProvider>
   );
 }

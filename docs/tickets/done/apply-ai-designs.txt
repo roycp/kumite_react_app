@@ -1,0 +1,78 @@
+Title: Apply AI Designs to Application
+Objective: Implement AI-generated design themes into the application for a cohesive look and feel.
+Details: Use the designs from the AI design documents to update the profile page, enabling users to switch between dark and light modes.
+State: (done)
+
+Steps:
+1. Review AI design documentation for style and theme guidance.
+2. Update profile page styling based on AI designs to ensure visual consistency.
+3. Implement a toggle feature for switching between dark and light modes.
+4. Ensure all UI components align with the design themes in both modes.
+5. Test the design application to ensure seamless user experience.
+
+Acceptance Criteria: The profile page reflects AI designs accurately with functional mode switching, providing a consistent user experience in both dark and light themes.
+
+Priority: 1
+Plan generated: (yes)
+Playwright test created: (yes) — e2e/apply-ai-designs.spec.ts
+Playwright test is passing: (yes)
+
+## Execution Plan
+
+### Files to create or edit
+- `context/ThemeContext.tsx` (create) — ThemeProvider with dark/light state, toggle function, persisted in localStorage
+- `app/screens/ProfileScreen.tsx` (edit) — Redesign with AI design aesthetics: rounded cards, Space Grotesk font, primary #5949be, surface colors from stitch/social_profile_light. Add dark/light mode toggle button.
+- `constants/theme.ts` (edit) — Add AI-derived dark theme color palette
+- `app/_layout.tsx` (edit) — Wrap with ThemeProvider
+
+### Theme tokens (from AI designs)
+Light:
+  - background: #f5f6f7
+  - surface: #ffffff
+  - primary: #5949be
+  - on-primary: #f5f0ff
+  - on-surface: #2c2f30
+  - on-surface-variant: #595c5d
+  - surface-container: #e6e8ea
+  - surface-container-low: #eff1f2
+  - secondary-container: #dcc9ff
+
+Dark (derived from ldarktheme_main page.html):
+  - background: #10141a
+  - surface: #1c2026
+  - primary: #c7bfff
+  - on-primary: #2c1092
+  - on-surface: #dfe2eb
+  - on-surface-variant: #c9c4d5
+  - surface-container: #1c2026
+  - surface-container-low: #181c22
+
+### UI components
+- Profile header: avatar, name, role badge, edit/save actions
+- Cards with rounded-[2rem] (32px border-radius)
+- Section labels in uppercase tracking-widest
+- Dark/light toggle button in header (sun/moon icon)
+- Fields in a clean 2-col grid
+
+### Playwright test approach
+- Inject user via localStorage seed
+- Navigate to /screens/ProfileScreen
+- Verify profile page renders with AI design elements (data-testid="profile-screen")
+- Click dark mode toggle, verify body class changes
+- Click light mode toggle, verify it reverts
+- Verify edit/save flow still works
+
+## Comments
+- The AI design (social_profile_light) uses Tailwind classes but the app uses inline styles — will translate colors to inline style objects
+- Toggle will store preference in localStorage under key 'kumite-theme'
+- Dark mode applied via adding/removing CSS class on document.documentElement or via React state
+
+## Review Notes
+- Checked: no duplicated ThemeContext logic — single ThemeContext for entire app
+- Checked: ProfileScreen no longer uses KumiteTheme tokens; derives all colors from aiTheme palettes
+- Checked: other screens (AdminTournamentsScreen etc.) continue to use KumiteTheme — out of scope for this ticket
+- Checked: ThemeProvider wraps entire app in _layout.tsx via KumiteThemeProvider alias
+- Checked: aiTheme colors sourced directly from stitch/social_profile_light (light) and ldarktheme_main page.html (dark)
+- Checked: edit/save flow unchanged, all data-testid attributes preserved
+- Checked: data-theme attribute added to profile screen div for reliable Playwright assertion
+- All 4 Playwright tests pass (4/4)
