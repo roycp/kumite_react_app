@@ -29,6 +29,7 @@ export default function RootLayout() {
             <Stack.Screen name="screens/ProfileScreen" options={{ headerShown: false }} />
             <Stack.Screen name="screens/TournamentHistory" options={{ headerShown: false }} />
             <Stack.Screen name="screens/BracketAdminScreen" options={{ headerShown: false }} />
+            <Stack.Screen name="screens/WeighInAdminScreen" options={{ headerShown: false }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

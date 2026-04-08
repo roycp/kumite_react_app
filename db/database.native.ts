@@ -130,6 +130,19 @@ export interface UserMartialArtRank {
   synced: boolean;
 }
 
+export interface WeighInResult {
+  id: string;
+  tournamentId: string;
+  registrationId: string;
+  athleteName: string;
+  discipline: string;
+  weightDivision: string | null;
+  actualWeightKg: number;
+  status: 'meets_weight' | 'lost_weight';
+  timestamp: string;
+  synced: boolean;
+}
+
 export interface RoleDefinition {
   id: string;
   name: string;
@@ -249,6 +262,16 @@ const BracketSeedSchema: Realm.ObjectSchema = {
   },
 };
 
+const WeighInResultSchema: Realm.ObjectSchema = {
+  name: 'WeighInResult', primaryKey: 'id',
+  properties: {
+    id: 'string', tournamentId: 'string', registrationId: 'string',
+    athleteName: 'string', discipline: 'string', weightDivision: { type: 'string', optional: true },
+    actualWeightKg: 'double', status: 'string',
+    timestamp: 'string', synced: { type: 'bool', default: false },
+  },
+};
+
 // ── Singleton ─────────────────────────────────────────────────────────────────
 
 let _realm: Realm | null = null;
@@ -256,8 +279,8 @@ let _realm: Realm | null = null;
 async function getRealm(): Promise<Realm> {
   if (_realm && !_realm.isClosed) return _realm;
   _realm = await Realm.open({
-    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, OrganizationSchema, RankSystemSchema, MartialArtSchema, UserMartialArtRankSchema, TournamentTemplateSchema, TournamentSchema, SessionSchema, RoleDefinitionSchema, BracketSeedSchema],
-    schemaVersion: 3,
+    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, OrganizationSchema, RankSystemSchema, MartialArtSchema, UserMartialArtRankSchema, TournamentTemplateSchema, TournamentSchema, SessionSchema, RoleDefinitionSchema, BracketSeedSchema, WeighInResultSchema],
+    schemaVersion: 4,
   });
   return _realm;
 }
@@ -757,4 +780,33 @@ export async function saveBracketSeeds(
   realm.write(() => {
     realm.create('BracketSeed', { tournamentId, seedsJson: JSON.stringify(seeds) }, Realm.UpdateMode.All);
   });
+}
+
+// ── Weigh-In Results ──────────────────────────────────────────────────────────
+
+export async function saveWeighInResult(
+  data: Omit<WeighInResult, 'id' | 'timestamp' | 'synced'>,
+): Promise<WeighInResult> {
+  const realm = await getRealm();
+  const record: WeighInResult = {
+    ...data,
+    weightDivision: data.weightDivision ?? null,
+    id: generateId(),
+    timestamp: new Date().toISOString(),
+    synced: false,
+  };
+  realm.write(() => { realm.create('WeighInResult', record); });
+  return record;
+}
+
+export async function getWeighInResultsByTournamentId(tournamentId: string): Promise<WeighInResult[]> {
+  const realm = await getRealm();
+  return Array.from(
+    realm.objects('WeighInResult').filtered('tournamentId == $0', tournamentId)
+  ).map((r: any) => ({
+    id: r.id, tournamentId: r.tournamentId, registrationId: r.registrationId,
+    athleteName: r.athleteName, discipline: r.discipline,
+    weightDivision: r.weightDivision ?? null, actualWeightKg: r.actualWeightKg,
+    status: r.status as WeighInResult['status'], timestamp: r.timestamp, synced: r.synced,
+  }));
 }

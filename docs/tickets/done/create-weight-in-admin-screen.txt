@@ -1,11 +1,11 @@
 Priority: 4
 Description: Develop an interface for tournament administrators to manage athlete weigh-ins.
-Resolved: (no)
-State: (waiting)
+Resolved: (yes)
+State: (done)
 Criteria of success: Admins can search athletes, record weigh-in results, mark as meets/lost weight, and entries are final; screen only accessible when tournament status is Weigh-In Open.
-Plan generated: (no)
-Playwright test created: (no)
-Playwright test is passing: (no)
+Plan generated: (yes)
+Playwright test created: (yes) e2e/create-weight-in-admin-screen.spec.ts
+Playwright test is passing: (yes)
 Unit test created: (no)
 
 Title: Create Tournament Administrator Screen for Weigh-In
@@ -25,3 +25,13 @@ Steps:
 Conditions: This screen should only be accessible when the tournament status is "Weigh-In Open."
 
 Acceptance Criteria: Admins can search and manage athlete weigh-ins with accurate and final weight records.
+
+## Review Notes
+
+- `WeighInAdminScreen` uses `usePermission('manage_tournaments')` — consistent with other admin screens.
+- Status guard shows a locked message if tournament is not in `weigh_in_open` state.
+- Uses `BracketParticipantCard` per ticket requirement — consistent with P3.
+- `WeighInResult` added to both `database.web.ts` and `database.native.ts` (Realm schemaVersion bumped to 4).
+- Weight class pass/fail logic: parses the last number from the weight division label string (e.g., "60–70 kg" → maxKg=70); open classes (null maxKg) always pass.
+- Navigation button "Gestionar Pesaje" added to `TournamentDashboardScreen`.
+- 5 Playwright tests pass: locked state, open state, search, meets-weight record, lost-weight + finality.

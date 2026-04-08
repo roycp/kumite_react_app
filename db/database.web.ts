@@ -138,6 +138,19 @@ export interface RoleDefinition {
   synced: boolean;
 }
 
+export interface WeighInResult {
+  id: string;
+  tournamentId: string;
+  registrationId: string;
+  athleteName: string;
+  discipline: string;
+  weightDivision: string | null;
+  actualWeightKg: number;
+  status: 'meets_weight' | 'lost_weight';
+  timestamp: string;
+  synced: boolean;
+}
+
 export interface UserMartialArtRank {
   id: string;
   userId: string;
@@ -161,6 +174,7 @@ const KEYS = {
   USER_RANKS:     'db:user_martial_art_ranks',
   ROLE_DEFS:      'db:role_definitions',
   BRACKET_SEEDS:  'db:bracket_seeds',
+  WEIGH_IN:       'db:weigh_in_results',
   SESSION:        'db:session_user_id',
 };
 
@@ -561,4 +575,25 @@ export async function saveBracketSeeds(
   const all = await readCollection<BracketSeedRecord>(KEYS.BRACKET_SEEDS);
   const updated = all.filter(r => r.tournamentId !== tournamentId);
   await writeCollection(KEYS.BRACKET_SEEDS, [...updated, { tournamentId, seeds }]);
+}
+
+// ── Weigh-In Results ──────────────────────────────────────────────────────────
+
+export async function saveWeighInResult(
+  data: Omit<WeighInResult, 'id' | 'timestamp' | 'synced'>,
+): Promise<WeighInResult> {
+  const all = await readCollection<WeighInResult>(KEYS.WEIGH_IN);
+  const record: WeighInResult = {
+    ...data,
+    id: generateId(),
+    timestamp: new Date().toISOString(),
+    synced: false,
+  };
+  await writeCollection(KEYS.WEIGH_IN, [...all, record]);
+  return record;
+}
+
+export async function getWeighInResultsByTournamentId(tournamentId: string): Promise<WeighInResult[]> {
+  const all = await readCollection<WeighInResult>(KEYS.WEIGH_IN);
+  return all.filter(r => r.tournamentId === tournamentId);
 }
