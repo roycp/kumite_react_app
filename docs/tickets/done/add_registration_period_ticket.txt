@@ -1,0 +1,24 @@
+Priority: 11
+Description: Add registration period functionality for tournaments.
+Resolved: (yes)
+State: (done)
+Criteria of success: Tournaments have a registration period defined by start and end dates beyond which registrations close automatically.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/add-registration-period.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Execution Plan
+- Added registrationStart/registrationEnd (string | null) to Tournament interface in database.web.ts and database.native.ts
+- Updated TournamentSchema in native to store registrationStart/registrationEnd as strings ('' = null)
+- Updated tournamentFromRealm to map '' → null
+- Updated AdminTournamentsScreen form with date inputs for registration period; handleAdd/startEdit/handleEditSave updated
+- Added isRegistrationOpen() helper in TournamentSearch
+- TournamentSearch shows 🔒 badge and disables tile click when registration is closed
+- TournamentSearch shows registration end date if set
+
+## Review Notes
+- isRegistrationOpen uses inclusive end date (23:59:59)
+- null registrationStart/End = no restriction
+- DB layer: both web and native handle null correctly
+- 3/3 Playwright tests passing (closed period, open period, no period)

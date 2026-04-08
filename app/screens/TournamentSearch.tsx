@@ -6,6 +6,21 @@ import * as DB from '../../db/database';
 import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 
+// Returns true if registration is currently open (null dates = no restriction)
+function isRegistrationOpen(registrationStart: string | null | undefined, registrationEnd: string | null | undefined): boolean {
+  const now = new Date();
+  if (registrationStart) {
+    const start = new Date(registrationStart);
+    if (now < start) return false;
+  }
+  if (registrationEnd) {
+    const end = new Date(registrationEnd);
+    end.setHours(23, 59, 59, 999); // inclusive of end date
+    if (now > end) return false;
+  }
+  return true;
+}
+
 // A unified tournament entry for display (covers both static and DB tournaments)
 interface DisplayTournament {
   id: string;
@@ -15,6 +30,8 @@ interface DisplayTournament {
   logo: string;
   disciplines: string[];
   source: 'static' | 'db';
+  registrationStart?: string | null;
+  registrationEnd?: string | null;
 }
 
 export default function TournamentSearch() {
@@ -41,13 +58,15 @@ export default function TournamentSearch() {
     setRegisteredIds(ids);
     const artMap = Object.fromEntries(arts.map(a => [a.id, a.name]));
     setDbTournaments(dbT.map(t2 => ({
-      id:          t2.id,
-      name:        t2.name,
-      date:        t2.date,
-      location:    t2.location,
-      logo:        t2.logo || '🏆',
-      disciplines: t2.martialArtIds.map(aid => artMap[aid]).filter(Boolean),
-      source:      'db',
+      id:                t2.id,
+      name:              t2.name,
+      date:              t2.date,
+      location:          t2.location,
+      logo:              t2.logo || '🏆',
+      disciplines:       t2.martialArtIds.map(aid => artMap[aid]).filter(Boolean),
+      source:            'db',
+      registrationStart: t2.registrationStart,
+      registrationEnd:   t2.registrationEnd,
     })));
   }, [currentUser]);
 
@@ -104,10 +123,11 @@ export default function TournamentSearch() {
     name:       { fontSize: 16, fontWeight: 700, color: '#1a1a2e', marginBottom: 8 },
     meta:       { fontSize: 13, color: '#666', marginBottom: 4 },
     dbBadge:    { display: 'inline-block', background: '#e8f4fd', color: '#1565c0', borderRadius: 4, padding: '1px 7px', fontSize: 10, fontWeight: 700, marginBottom: 6, letterSpacing: '0.04em' },
-    badge:      { display: 'inline-flex', alignItems: 'center', gap: 5, background: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7', borderRadius: 20, padding: '4px 10px', fontSize: 12, fontWeight: 600, marginTop: 10 },
-    btn:        { marginTop: 12, padding: '8px 18px', background: '#6750a4', border: 'none', borderRadius: 20, color: '#fff', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' },
-    discipline: { display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginTop: 8 },
-    disciplineTag: { background: '#f0ebff', color: '#6750a4', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 },
+    badge:        { display: 'inline-flex', alignItems: 'center', gap: 5, background: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7', borderRadius: 20, padding: '4px 10px', fontSize: 12, fontWeight: 600, marginTop: 10 },
+    closedBadge:  { display: 'inline-flex', alignItems: 'center', gap: 5, background: '#fce8e6', color: '#b3261e', border: '1px solid #f4b8b5', borderRadius: 20, padding: '4px 10px', fontSize: 12, fontWeight: 600, marginTop: 10 },
+    btn:          { marginTop: 12, padding: '8px 18px', background: '#6750a4', border: 'none', borderRadius: 20, color: '#fff', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' },
+    discipline:   { display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginTop: 8 },
+    disciplineTag:{ background: '#f0ebff', color: '#6750a4', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 },
   };
 
   return (
@@ -149,20 +169,24 @@ export default function TournamentSearch() {
           ) : (
             <div className="kb-search-grid" style={s.grid}>
               {filtered.map(t2 => {
-                const enrolled = registeredIds.includes(t2.id);
+                const enrolled   = registeredIds.includes(t2.id);
+                const regOpen    = t2.source === 'db'
+                  ? isRegistrationOpen(t2.registrationStart, t2.registrationEnd)
+                  : true; // static tournaments have no period restriction
+                const canClick   = !enrolled && regOpen;
                 return (
                   <div
                     key={`${t2.source}-${t2.id}`}
                     data-testid={`tournament-tile-${t2.id}`}
-                    style={s.tile(enrolled)}
-                    onClick={() => { if (!enrolled) goToDetail(t2); }}
+                    style={s.tile(!canClick)}
+                    onClick={() => { if (canClick) goToDetail(t2); }}
                     onMouseEnter={e => {
-                      if (enrolled) return;
+                      if (!canClick) return;
                       (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(103,80,164,0.2)';
                       (e.currentTarget as HTMLElement).style.borderColor = '#6750a4';
                     }}
                     onMouseLeave={e => {
-                      if (enrolled) return;
+                      if (!canClick) return;
                       (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
                       (e.currentTarget as HTMLElement).style.borderColor = '#efefef';
                     }}
@@ -172,6 +196,9 @@ export default function TournamentSearch() {
                     <div style={s.name}>{t2.name}</div>
                     <div style={s.meta}>📅 {t('search.date')}: {t2.date}</div>
                     <div style={s.meta}>📍 {t('search.location')}: {t2.location}</div>
+                    {t2.registrationEnd && (
+                      <div style={s.meta}>🗓️ Cierre inscripción: {t2.registrationEnd}</div>
+                    )}
 
                     {t2.disciplines.length > 0 && (
                       <div style={s.discipline}>
@@ -182,6 +209,10 @@ export default function TournamentSearch() {
                     {enrolled ? (
                       <div data-testid={`enrolled-badge-${t2.id}`} style={s.badge}>
                         ✓ Ya estás inscrito
+                      </div>
+                    ) : !regOpen ? (
+                      <div data-testid={`reg-closed-badge-${t2.id}`} style={s.closedBadge}>
+                        🔒 Inscripciones cerradas
                       </div>
                     ) : (
                       <button

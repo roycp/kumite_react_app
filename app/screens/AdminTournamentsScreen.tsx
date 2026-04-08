@@ -29,7 +29,7 @@ const STATUS_COLORS: Record<TStatus, { bg: string; text: string }> = {
   cancelled: { bg: T.colors.errorLight, text: T.colors.error },
 };
 
-const EMPTY_FORM = { logo: '🏆', name: '', date: '', location: '', description: '', status: 'upcoming' as TStatus, martialArtIds: [] as string[] };
+const EMPTY_FORM = { logo: '🏆', name: '', date: '', location: '', description: '', status: 'upcoming' as TStatus, martialArtIds: [] as string[], registrationStart: '', registrationEnd: '' };
 type FormState = typeof EMPTY_FORM;
 
 const s = {
@@ -143,6 +143,14 @@ export default function AdminTournamentsScreen() {
           <option value="cancelled">Cancelado</option>
         </select>
       </div>
+      <div style={s.inputWrap}>
+        <label style={s.label}>Inicio de Inscripciones</label>
+        <input style={s.input} type="date" value={f.registrationStart} onChange={e => set({ ...f, registrationStart: val(e) })} data-testid={`${prefix}-reg-start`} />
+      </div>
+      <div style={s.inputWrap}>
+        <label style={s.label}>Cierre de Inscripciones</label>
+        <input style={s.input} type="date" value={f.registrationEnd} onChange={e => set({ ...f, registrationEnd: val(e) })} data-testid={`${prefix}-reg-end`} />
+      </div>
       {arts.length > 0 && (
         <div style={{ ...s.inputWrap, gridColumn: 'span 4' } as any}>
           <label style={s.label}>Artes Marciales</label>
@@ -174,6 +182,8 @@ export default function AdminTournamentsScreen() {
       description: form.description.trim(),
       status: form.status,
       martialArtIds: form.martialArtIds,
+      registrationStart: form.registrationStart || null,
+      registrationEnd:   form.registrationEnd   || null,
     });
     setForm(EMPTY_FORM);
     load();
@@ -181,7 +191,7 @@ export default function AdminTournamentsScreen() {
 
   const startEdit = (t: DB.Tournament) => {
     setEditId(t.id);
-    setEditForm({ logo: t.logo, name: t.name, date: t.date, location: t.location, description: t.description, status: t.status, martialArtIds: t.martialArtIds ?? [] });
+    setEditForm({ logo: t.logo, name: t.name, date: t.date, location: t.location, description: t.description, status: t.status, martialArtIds: t.martialArtIds ?? [], registrationStart: t.registrationStart ?? '', registrationEnd: t.registrationEnd ?? '' });
   };
 
   const handleEditSave = async () => {
@@ -194,6 +204,8 @@ export default function AdminTournamentsScreen() {
       description: editForm.description.trim(),
       status: editForm.status,
       martialArtIds: editForm.martialArtIds,
+      registrationStart: editForm.registrationStart || null,
+      registrationEnd:   editForm.registrationEnd   || null,
     });
     setEditId(null);
     load();

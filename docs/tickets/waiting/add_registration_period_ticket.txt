@@ -1,9 +1,0 @@
-Priority: 11
-Description: Add registration period functionality for tournaments.
-Resolved: (no)
-State: (waiting)
-Criteria of success: Tournaments have a registration period defined by start and end dates beyond which registrations close automatically.
-Plan generated: (no)
-Playwright test created: (no)
-Playwright test is passing: (no)
-Unit test created: (no)

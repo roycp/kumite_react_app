@@ -121,6 +121,8 @@ export interface Tournament {
   description: string;
   status: 'upcoming' | 'active' | 'closed' | 'cancelled';
   martialArtIds: string[];
+  registrationStart: string | null;
+  registrationEnd: string | null;
   createdAt: string;
   synced: boolean;
 }
