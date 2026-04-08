@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import * as DB from '../../db/database';
@@ -602,6 +602,138 @@ function WebWizard({
   );
 }
 
+// ── DB tournament wizard (simplified, no weight-class selection) ──────────────
+
+function DbFormWizard({ currentUser, tournamentId, tournamentName }: {
+  currentUser: DB.User;
+  tournamentId: string;
+  tournamentName: string;
+}) {
+  const router = useRouter();
+  const [martialArts,      setMartialArts]      = useState<DB.MartialArt[]>([]);
+  const [userRanks,        setUserRanks]         = useState<DB.UserMartialArtRank[]>([]);
+  const [academy,          setAcademy]           = useState(currentUser.academy || '');
+  const [phase,            setPhase]             = useState<'info' | 'modality' | 'success'>('info');
+  const [chosenDiscipline, setChosenDiscipline]  = useState('');
+  const [error,            setError]             = useState('');
+  const ageGroup = parseInt(currentUser.age) < 18 ? 'Sub-18' : 'Adulto';
+
+  const load = useCallback(async () => {
+    const [t2, arts, ranks] = await Promise.all([
+      DB.getTournamentById(tournamentId),
+      DB.getAllMartialArts(),
+      DB.getUserMartialArtRanks(currentUser.id),
+    ]);
+    if (t2) {
+      setMartialArts(arts.filter(a => t2.martialArtIds.includes(a.id)));
+    }
+    setUserRanks(ranks);
+  }, [tournamentId, currentUser.id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const submitInfo = () => {
+    setError('');
+    if (!academy.trim()) { setError('Academia es requerida'); return; }
+    setPhase('modality');
+  };
+
+  const pickDiscipline = (art: DB.MartialArt) => {
+    const rankEntry = userRanks.find(r => r.martialArtId === art.id);
+    const grade = rankEntry?.rankSystemId ?? currentUser.beltGrade ?? '';
+    const entry: DB.ModalityEntry = {
+      discipline: art.name, weightDivision: null,
+      gender: currentUser.gender, ageGroup,
+    };
+    DB.addRegistration({
+      userId:         currentUser.id,
+      tournamentId,
+      tournamentName,
+      athleteName:    currentUser.fullName,
+      academy,
+      grade,
+      modalities:     [entry],
+      timestamp:      new Date().toISOString(),
+    });
+    setChosenDiscipline(art.name);
+    setPhase('success');
+  };
+
+  return (
+    <div style={S.page}>
+      <div className="kb-form-card" style={S.card}>
+        {phase === 'info' && (
+          <>
+            <div style={S.title}>🥋 Información del Atleta</div>
+            <div style={S.sub}>Inscripción: {tournamentName}</div>
+            {error && <div style={S.errorBox}>{error}</div>}
+            <div style={S.field}>
+              <label style={S.label} htmlFor="db-academy-input">Tu Academia *</label>
+              <input
+                id="db-academy-input"
+                data-testid="academy-input"
+                style={S.input}
+                placeholder="Nombre de tu academia"
+                value={academy}
+                onChange={(e: any) => setAcademy((e.target as HTMLInputElement).value)}
+              />
+            </div>
+            <div style={S.actions}>
+              <button style={S.btnBack} type="button" onClick={() => router.back()}>← Atrás</button>
+              <button style={S.btnPrimary} type="button" onClick={submitInfo} data-testid="btn-next-info">
+                Siguiente →
+              </button>
+            </div>
+          </>
+        )}
+
+        {phase === 'modality' && (
+          <>
+            <div style={S.title}>🏅 Elige tu Disciplina</div>
+            <div style={S.sub}>{martialArts.length} disciplina{martialArts.length !== 1 ? 's' : ''} disponible{martialArts.length !== 1 ? 's' : ''}</div>
+            <div className="kb-form-grid2" style={S.grid2} data-testid="modality-grid">
+              {martialArts.map(art => (
+                <div
+                  key={art.id}
+                  data-testid={`modality-tile-${art.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  style={S.tile(false)}
+                  onClick={() => pickDiscipline(art)}
+                >
+                  <span style={S.tileIcon}>{art.logo || '🥋'}</span>
+                  <div style={S.tileName}>{art.name}</div>
+                </div>
+              ))}
+            </div>
+            <div style={S.actions}>
+              <button style={S.btnBack} type="button" onClick={() => setPhase('info')}>← Atrás</button>
+            </div>
+          </>
+        )}
+
+        {phase === 'success' && (
+          <div data-testid="success-message" style={S.successWrap}>
+            <div style={S.successIcon}>🏆</div>
+            <div style={S.successTitle}>✓ ¡Inscripción Exitosa!</div>
+            <div style={S.successSub}>Has sido inscrito en {tournamentName}</div>
+            <div style={S.successCard}>
+              <div style={{ fontWeight: 700, color: '#6750a4', fontSize: 14, marginBottom: 8 }}>Disciplina inscrita:</div>
+              <div style={S.successRow}><strong>{chosenDiscipline}</strong></div>
+            </div>
+            <button
+              data-testid="btn-volver-inicio"
+              style={S.homeBtn}
+              type="button"
+              onClick={() => router.replace('/screens/MainScreen' as any)}
+            >
+              🏠 Volver al Inicio
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 export default function FormScreen() {
@@ -611,9 +743,13 @@ export default function FormScreen() {
     tournamentName?: string;
     registrationId?: string;
     athleteId?:      string;
+    source?:         string;
   }>();
 
-  const tournament     = params.tournamentId   ? getTournamentById(String(params.tournamentId)) ?? null : null;
+  const source         = String(params.source || 'static');
+  const tournament     = source === 'static' && params.tournamentId
+    ? getTournamentById(String(params.tournamentId)) ?? null
+    : null;
   const registrationId = params.registrationId ? String(params.registrationId) : undefined;
   const athleteId      = params.athleteId      ? String(params.athleteId)      : undefined;
 
@@ -633,5 +769,16 @@ export default function FormScreen() {
   if (loadingTarget) return null;
 
   const wizardUser = targetUser ?? currentUser;
+
+  if (source === 'db') {
+    return (
+      <DbFormWizard
+        currentUser={wizardUser}
+        tournamentId={String(params.tournamentId ?? '')}
+        tournamentName={params.tournamentName ? decodeURIComponent(String(params.tournamentName)) : ''}
+      />
+    );
+  }
+
   return <WebWizard currentUser={wizardUser} tournament={tournament} registrationId={registrationId} />;
 }

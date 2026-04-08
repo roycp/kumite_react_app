@@ -1,0 +1,58 @@
+Priority: 10
+Description: Replace the registration system to use values from the organization and martial arts modules.
+Resolved: (yes)
+State: (done)
+Criteria of success: Registration system is updated to utilize the organization and martial art values effectively.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/replace-registration-with-org-martial-arts.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Execution Plan
+
+### Problem
+TournamentSearch shows only static tournaments (from data/tournaments.ts). Admin creates real DB tournaments (with martialArtIds). FormScreen uses static tournament data for registration flow (disciplines, grades, weight classes).
+
+### Changes
+
+#### TournamentSearch (app/screens/TournamentSearch.tsx)
+- Load DB tournaments via DB.getAllTournaments() + DB.getAllMartialArts()
+- Merge with static TOURNAMENTS; DB entries shown below static list
+- Show martial art names as discipline tags for DB tournaments
+- Pass `source=db` param when navigating to TournamentDetail for DB tournaments
+
+#### TournamentDetail (app/screens/TournamentDetail.tsx)
+- Accept `source` param
+- When source=db: load tournament from DB.getTournamentById(id), load its martial arts
+- Show DB tournament fields (name, date, location, status, martial arts)
+- Pass `source=db` to FormScreen URL
+
+#### FormScreen (app/screens/FormScreen.tsx)
+- Accept `source` param (default='static')
+- When source=db: load DB tournament + its martial arts; skip complex category/grade/weight filtering
+- DB flow: offer each linked martial art as a selectable discipline tile
+- Auto-fill grade from user's UserMartialArtRank for that martial art
+- Save registration as before (same DB.addRegistration call)
+
+### Playwright test (e2e/replace-registration-with-org-martial-arts.spec.ts)
+- Inject admin + a DB tournament with a martial art linked
+- Navigate to TournamentSearch → see DB tournament card
+- Click → navigate to TournamentDetail showing DB data
+- Click register → FormScreen with DB disciplines
+- Select a discipline → confirm registration
+- Verify registration appears in TournamentManagement
+
+## Comments
+- DB Tournament interface: { id, name, date, location, logo, description, status, martialArtIds[], createdAt, synced }
+- Static Tournament interface from data/tournaments.ts is different (has categories, grades, weight classes)
+- DB.getTournamentById already exists in database.web.ts and database.native.ts
+- Pass source=db through navigation chain: Search → Detail → Form
+- Simplified DB registration flow: no weight class selection, disciplines = martial art names
+## Review Notes
+- TournamentSearch: useCallback + Promise.all for consistent data loading pattern
+- TournamentDetail: properly loads DB tournament + filters martial arts by martialArtIds
+- FormScreen: DbFormWizard component added — no role checks, uses DB.getUserMartialArtRanks to auto-fill grade
+- DB key 'db:martial_arts' and 'db:user_martial_art_ranks' used correctly (match KEYS constants)
+- source=db param flows through Search → Detail → Form navigation chain
+- Static tournament flow fully preserved (backwards compatible)
+- 2/2 Playwright tests passing
