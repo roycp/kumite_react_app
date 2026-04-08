@@ -1,0 +1,42 @@
+Priority: 2
+Description: Replace current tournament bracket implementation with g-loot/react-tournament-brackets library.
+Resolved: (no)
+State: (done)
+Criteria of success: New bracket system is fully operational and integrated; existing bracket views render correctly with the new library.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/switch-tournament-bracket-library.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+Title: Switch Tournament Bracket Library
+Objective: Replace current tournament bracket implementation with g-loot/react-tournament-brackets.
+Details: Integrate the g-loot/react-tournament-brackets for improved functionality.
+Steps:
+1. Install new library.
+2. Replace existing components.
+3. Test and ensure compatibility.
+Acceptance Criteria: New bracket system is fully operational and integrated.
+
+## Execution Plan
+
+Files to create/edit:
+- `app/screens/TournamentBracketScreen.tsx` (edit) — replace custom bracket renderer with SingleEliminationBracket from @g-loot/react-tournament-brackets; keep category card data-testids intact
+- `e2e/switch-tournament-bracket-library.spec.ts` — Playwright tests asserting the new library renders participant names and BYEs
+
+Dependencies installed: @g-loot/react-tournament-brackets, react-svg-pan-zoom, styled-components (--legacy-peer-deps)
+
+Approach:
+- Add buildGlootMatches() helper that converts participants[] → g-loot match format with nextMatchId tree
+- Wrap each category with data-testid div (preserving existing test assertions)
+- Render SingleEliminationBracket inside each category card
+- Keep existing spec (generate-tournament-bracket-view.spec.ts) passing
+
+## Review Notes
+- Permissions: uses `usePermission('manage_tournaments')` — consistent with other organizer screens.
+- Theme: all colors/spacing from KumiteTheme; no hardcoded values introduced.
+- Data layer: `groupByCategory` logic unchanged; new `buildGlootMatches` helper is self-contained.
+- Existing `generate-tournament-bracket-view.spec.ts` (4 tests) still passes — `data-testid` wrappers preserved.
+- New spec `switch-tournament-bracket-library.spec.ts` (4 tests) verifies SVG rendering, BYE padding, and multi-category layout.
+- No duplicated hooks or components; no hardcoded role string checks in components.
+
+## Comments

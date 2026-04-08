@@ -15,7 +15,7 @@ without an horizontal scroll in all screens
 2. the following pages does not have scroll feature:
 Resolved [Yes]
 
-Description:
+Description :
   - tornament history
   - profile page
   - tornament search page
