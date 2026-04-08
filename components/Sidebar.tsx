@@ -31,6 +31,13 @@ const MANAGER_NAV: NavItem[] = [
   { icon: '👥', label: 'Mi Equipo',         route: '/screens/TeamManagement',          testId: 'sidebar-team' },
 ];
 
+const ORGANIZER_NAV: NavItem[] = [
+  { icon: '🏠', label: 'Inicio',            route: '/screens/MainScreen',              testId: 'sidebar-home' },
+  { icon: '👤', label: 'Mi Perfil',         route: '/screens/ProfileScreen',           testId: 'sidebar-profile' },
+  { icon: '🏆', label: 'Torneos',           route: '/screens/AdminTournamentsScreen',  testId: 'sidebar-admin-tournaments' },
+  { icon: '📋', label: 'Plantillas',        route: '/screens/TournamentTemplatesScreen', testId: 'sidebar-templates' },
+];
+
 const ADMIN_NAV: NavItem[] = [
   { icon: '🏠', label: 'Inicio',            route: '/screens/MainScreen',              testId: 'sidebar-home' },
   { icon: '👤', label: 'Mi Perfil',         route: '/screens/ProfileScreen',           testId: 'sidebar-profile' },
@@ -39,6 +46,7 @@ const ADMIN_NAV: NavItem[] = [
   { icon: '🏆', label: 'Torneos',           route: '/screens/AdminTournamentsScreen',  testId: 'sidebar-admin-tournaments' },
   { icon: '📋', label: 'Plantillas',        route: '/screens/TournamentTemplatesScreen', testId: 'sidebar-templates' },
   { icon: '👥', label: 'Usuarios',          route: '/screens/UsersScreen',             testId: 'sidebar-users' },
+  { icon: '🔑', label: 'Roles',             route: '/screens/RoleAdminScreen',         testId: 'sidebar-roles' },
 ];
 
 interface SidebarProps {
@@ -53,8 +61,9 @@ export default function Sidebar({ children }: SidebarProps) {
   const [open, setOpen] = useState(false);
 
   const navItems =
-    currentUser?.role === 'admin'   ? ADMIN_NAV :
-    currentUser?.role === 'manager' ? MANAGER_NAV :
+    currentUser?.role === 'admin'     ? ADMIN_NAV :
+    currentUser?.role === 'organizer' ? ORGANIZER_NAV :
+    currentUser?.role === 'manager'   ? MANAGER_NAV :
     ATHLETE_NAV;
 
   const handleLogout = async () => {
@@ -190,11 +199,11 @@ function SidebarContent({ currentUser, navItems, isActive, navigate, handleLogou
       {/* User badge */}
       <div style={s.sbHeader}>
         <div style={s.sbAvatar}>
-          {currentUser?.role === 'admin' ? '🛡️' : currentUser?.role === 'manager' ? '📋' : '🥋'}
+          {currentUser?.role === 'admin' ? '🛡️' : currentUser?.role === 'organizer' ? '🏆' : currentUser?.role === 'manager' ? '📋' : '🥋'}
         </div>
         <div style={s.sbName}>{currentUser?.fullName ?? 'Usuario'}</div>
         <div style={s.sbEmail}>
-          {currentUser?.role === 'admin' ? 'Administrador' : currentUser?.role === 'manager' ? 'Manager' : 'Atleta'}
+          {currentUser?.role === 'admin' ? 'Administrador' : currentUser?.role === 'organizer' ? 'Organizador' : currentUser?.role === 'manager' ? 'Manager' : 'Atleta'}
         </div>
       </div>
 

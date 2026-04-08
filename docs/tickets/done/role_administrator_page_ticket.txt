@@ -1,0 +1,25 @@
+Priority: 17
+Description: Create a role administrator page to manage roles and assign permissions to them.
+Resolved: (yes)
+State: (done)
+Criteria of success: Page allows creation and editing of roles, and assignment of predefined permissions, enhancing flexibility in user access management.
+Plan generated: (yes)
+Playwright test created: (yes) e2e/role-administrator-page.spec.ts
+Playwright test is passing: (yes)
+Unit test created: (no)
+
+## Review Notes
+- RoleDefinition stored in db:role_definitions (localStorage/Realm) — separate from hardcoded ROLE_PERMISSIONS; wiring happens in ticket #18
+- ALL_PERMISSIONS exported from constants/permissions.ts as source of truth for permission checkboxes
+- RoleAdminScreen gated by manage_users permission (admins only) — organizers don't manage roles
+- Sidebar updated with organizer nav (manage_tournaments screens) and "Roles" entry for admin
+- Realm schema bumped to version 2 for RoleDefinitionSchema addition
+- All 4 tests pass: create, edit, delete, athlete redirect
+
+## Execution Plan
+- Add RoleDefinition interface { id, name, displayName, permissions: string[], createdAt, synced } to db/database.web.ts and db/database.native.ts
+- Add DB functions: getAllRoleDefinitions, createRoleDefinition, updateRoleDefinition, deleteRoleDefinition
+- Create RoleAdminScreen.tsx: admin-only (manage_users), list + add/edit/delete with permission checkboxes from ALL_PERMISSIONS list
+- Add "Roles" nav item to ADMIN_NAV in Sidebar.tsx
+- Fix Sidebar to show organizer nav (same as admin but without manage_users screens)
+- Playwright test: admin creates role with permissions, edits it, deletes it; non-admin redirected

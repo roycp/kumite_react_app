@@ -129,6 +129,15 @@ export interface Tournament {
   synced: boolean;
 }
 
+export interface RoleDefinition {
+  id: string;
+  name: string;        // machine name, e.g. 'tournament_organizer'
+  displayName: string; // human-readable, e.g. 'Tournament Organizer'
+  permissions: string[];
+  createdAt: string;
+  synced: boolean;
+}
+
 export interface UserMartialArtRank {
   id: string;
   userId: string;
@@ -150,6 +159,7 @@ const KEYS = {
   TEMPLATES:     'db:tournament_templates',
   TOURNAMENTS:   'db:tournaments',
   USER_RANKS:    'db:user_martial_art_ranks',
+  ROLE_DEFS:     'db:role_definitions',
   SESSION:       'db:session_user_id',
 };
 
@@ -494,4 +504,42 @@ export async function markAllSynced(): Promise<void> {
     writeCollection(KEYS.REGISTRATIONS, mark(registrations)),
     writeCollection(KEYS.ASSIGNMENTS, mark(assignments)),
   ]);
+}
+
+// ── Role Definitions ──────────────────────────────────────────────────────────
+
+export async function getAllRoleDefinitions(): Promise<RoleDefinition[]> {
+  return readCollection<RoleDefinition>(KEYS.ROLE_DEFS);
+}
+
+export async function createRoleDefinition(
+  data: Pick<RoleDefinition, 'name' | 'displayName' | 'permissions'>,
+): Promise<RoleDefinition> {
+  const defs = await readCollection<RoleDefinition>(KEYS.ROLE_DEFS);
+  const def: RoleDefinition = {
+    id:          generateId(),
+    name:        data.name,
+    displayName: data.displayName,
+    permissions: data.permissions,
+    createdAt:   new Date().toISOString(),
+    synced:      false,
+  };
+  await writeCollection(KEYS.ROLE_DEFS, [...defs, def]);
+  return def;
+}
+
+export async function updateRoleDefinition(
+  id: string,
+  patch: Partial<Pick<RoleDefinition, 'name' | 'displayName' | 'permissions'>>,
+): Promise<void> {
+  const defs = await readCollection<RoleDefinition>(KEYS.ROLE_DEFS);
+  await writeCollection(
+    KEYS.ROLE_DEFS,
+    defs.map(d => (d.id === id ? { ...d, ...patch } : d)),
+  );
+}
+
+export async function deleteRoleDefinition(id: string): Promise<void> {
+  const defs = await readCollection<RoleDefinition>(KEYS.ROLE_DEFS);
+  await writeCollection(KEYS.ROLE_DEFS, defs.filter(d => d.id !== id));
 }

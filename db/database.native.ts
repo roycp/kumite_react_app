@@ -130,6 +130,15 @@ export interface UserMartialArtRank {
   synced: boolean;
 }
 
+export interface RoleDefinition {
+  id: string;
+  name: string;
+  displayName: string;
+  permissions: string[];
+  createdAt: string;
+  synced: boolean;
+}
+
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
 const UserSchema: Realm.ObjectSchema = {
@@ -223,6 +232,15 @@ const SessionSchema: Realm.ObjectSchema = {
   properties: { key: 'string', value: 'string' },
 };
 
+const RoleDefinitionSchema: Realm.ObjectSchema = {
+  name: 'RoleDefinition', primaryKey: 'id',
+  properties: {
+    id: 'string', name: 'string', displayName: 'string',
+    permissionsStr: 'string', // JSON array of permission strings
+    createdAt: 'string', synced: { type: 'bool', default: false },
+  },
+};
+
 // ── Singleton ─────────────────────────────────────────────────────────────────
 
 let _realm: Realm | null = null;
@@ -230,8 +248,8 @@ let _realm: Realm | null = null;
 async function getRealm(): Promise<Realm> {
   if (_realm && !_realm.isClosed) return _realm;
   _realm = await Realm.open({
-    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, OrganizationSchema, RankSystemSchema, MartialArtSchema, UserMartialArtRankSchema, TournamentTemplateSchema, TournamentSchema, SessionSchema],
-    schemaVersion: 1,
+    schema: [UserSchema, RegistrationSchema, CoachAssignmentSchema, OrganizationSchema, RankSystemSchema, MartialArtSchema, UserMartialArtRankSchema, TournamentTemplateSchema, TournamentSchema, SessionSchema, RoleDefinitionSchema],
+    schemaVersion: 2,
   });
   return _realm;
 }
@@ -655,4 +673,61 @@ export async function markAllSynced(): Promise<void> {
     realm.objects('Registration').filtered('synced == false').forEach((r: any) => { r.synced = true; });
     realm.objects('CoachAssignment').filtered('synced == false').forEach((a: any) => { a.synced = true; });
   });
+}
+
+// ── Role Definitions ──────────────────────────────────────────────────────────
+
+function roleDefFromRealm(obj: any): RoleDefinition {
+  return {
+    id:          obj.id,
+    name:        obj.name,
+    displayName: obj.displayName,
+    permissions: obj.permissionsStr ? JSON.parse(obj.permissionsStr) : [],
+    createdAt:   obj.createdAt,
+    synced:      obj.synced,
+  };
+}
+
+export async function getAllRoleDefinitions(): Promise<RoleDefinition[]> {
+  const realm = await getRealm();
+  return Array.from(realm.objects('RoleDefinition')).map((d: any) => roleDefFromRealm(d));
+}
+
+export async function createRoleDefinition(
+  data: Pick<RoleDefinition, 'name' | 'displayName' | 'permissions'>,
+): Promise<RoleDefinition> {
+  const realm = await getRealm();
+  let created: any;
+  realm.write(() => {
+    created = realm.create('RoleDefinition', {
+      id:             generateId(),
+      name:           data.name,
+      displayName:    data.displayName,
+      permissionsStr: JSON.stringify(data.permissions),
+      createdAt:      new Date().toISOString(),
+      synced:         false,
+    });
+  });
+  return roleDefFromRealm(created);
+}
+
+export async function updateRoleDefinition(
+  id: string,
+  patch: Partial<Pick<RoleDefinition, 'name' | 'displayName' | 'permissions'>>,
+): Promise<void> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('RoleDefinition', id);
+  if (!obj) return;
+  realm.write(() => {
+    if (patch.name        !== undefined) (obj as any).name           = patch.name;
+    if (patch.displayName !== undefined) (obj as any).displayName    = patch.displayName;
+    if (patch.permissions !== undefined) (obj as any).permissionsStr = JSON.stringify(patch.permissions);
+  });
+}
+
+export async function deleteRoleDefinition(id: string): Promise<void> {
+  const realm = await getRealm();
+  const obj = realm.objectForPrimaryKey('RoleDefinition', id);
+  if (!obj) return;
+  realm.write(() => { realm.delete(obj); });
 }
