@@ -1,9 +1,9 @@
 Priority: 5
 Description: Provide clear instructions in the README for initial project setup and local execution.
-Resolved: (no)
-State: (waiting)
+Resolved: (yes)
+State: (done)
 Criteria of success: README is complete with setup, run instructions, and is easily understood by new developers.
-Plan generated: (no)
+Plan generated: (yes)
 Playwright test created: (no)
 Playwright test is passing: (no)
 Unit test created: (no)
