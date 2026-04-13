@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { KumiteTheme, KumiteThemeDark } from '../constants/theme';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -29,10 +30,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Apply dark class to <html> for any global CSS that listens to it
-    if (typeof document !== 'undefined') {
-      document.documentElement.classList.toggle('dark', mode === 'dark');
-    }
+    if (typeof document === 'undefined') return;
+    const dark = mode === 'dark';
+    document.documentElement.classList.toggle('dark', dark);
+    // Paint the full-page background so the area outside of cards also changes
+    document.body.style.background = dark ? KumiteThemeDark.colors.background : KumiteTheme.colors.background;
+    document.body.style.color      = dark ? KumiteThemeDark.colors.text       : KumiteTheme.colors.text;
     try {
       localStorage.setItem(STORAGE_KEY, mode);
     } catch {}
@@ -51,6 +54,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function useTheme() {
   return useContext(ThemeContext);
+}
+
+/**
+ * Returns the KumiteTheme token set for the current mode.
+ * Drop-in replacement for `KumiteTheme as T` static imports:
+ *   import { useKumiteTheme } from '../../context/ThemeContext';
+ *   const T = useKumiteTheme();
+ */
+export function useKumiteTheme() {
+  const { isDark } = useTheme();
+  return isDark ? KumiteThemeDark : KumiteTheme;
 }
 
 // ── Color palettes from AI stitch designs ────────────────────────────────────

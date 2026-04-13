@@ -9,32 +9,34 @@ import EditModalitiesModal from '../../components/modals/EditModalitiesModal';
 import CancelConfirmModal from '../../components/modals/CancelConfirmModal';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { useRegistrations } from '../../hooks/useRegistrations';
-import { KumiteTheme as T } from '../../constants/theme';
-
-const s = {
-  page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
-  maxW:       { maxWidth: 820, margin: '0 auto' },
-  pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 6 },
-  pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
-  loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
-  empty:      { textAlign: 'center' as const, padding: '60px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
-  emptyIcon:  { fontSize: 56, display: 'block', marginBottom: 16 },
-  emptyTxt:   { fontSize: T.font.size.xl, marginBottom: 8 },
-  emptyBtn:   { marginTop: 16, padding: '10px 24px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.base, cursor: 'pointer', fontFamily: 'inherit' },
-  card:       { background: T.colors.card, borderRadius: T.radius.lg, padding: 24, marginBottom: 16, boxShadow: T.shadow.card },
-  cardHeader: { display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14, flexWrap: 'wrap' as const },
-  cardIcon:   { fontSize: 36, lineHeight: 1 },
-  cardMeta:   { flex: 1 },
-  tname:      { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 3 },
-  dateLine:   { fontSize: T.font.size.md, color: T.colors.muted },
-  btnRow:     { display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' as const },
-  editBtn:    { padding: '6px 16px', background: 'transparent', border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const },
-  cancelBtn:  { padding: '6px 16px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const },
-  modalGrid:  { display: 'flex', flexWrap: 'wrap' as const, gap: 10 },
-  noModal:    { fontSize: T.font.size.md, color: T.colors.mutedLight, fontStyle: 'italic' },
-} as const;
+import { useKumiteTheme } from '../../context/ThemeContext';
 
 export default function TournamentManagement() {
+  const T = useKumiteTheme();
+  const s = {
+    page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
+    maxW:       { maxWidth: 820, margin: '0 auto' },
+    pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 6 },
+    pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
+    loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
+    empty:      { textAlign: 'center' as const, padding: '60px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
+    emptyIcon:  { fontSize: 56, display: 'block', marginBottom: 16 },
+    emptyTxt:   { fontSize: T.font.size.xl, marginBottom: 8 },
+    emptyBtn:   { marginTop: 16, padding: '10px 24px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.base, cursor: 'pointer', fontFamily: 'inherit' },
+    card:       { background: T.colors.card, borderRadius: T.radius.lg, padding: 24, marginBottom: 16, boxShadow: T.shadow.card },
+    cardHeader: { display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14, flexWrap: 'wrap' as const },
+    cardIcon:   { fontSize: 36, lineHeight: 1 },
+    cardMeta:   { flex: 1 },
+    tname:      { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 3 },
+    dateLine:   { fontSize: T.font.size.md, color: T.colors.muted },
+    btnRow:     { display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' as const },
+    editBtn:    { padding: '6px 16px', background: 'transparent', border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const },
+    cancelBtn:  { padding: '6px 16px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const },
+    modalGrid:  { display: 'flex', flexWrap: 'wrap' as const, gap: 10 },
+    noModal:    { fontSize: T.font.size.md, color: T.colors.mutedLight, fontStyle: 'italic' },
+  } as const;
+
+
   const router = useRouter();
   const { t } = useTranslation();
   const { currentUser, isLoading } = useAuthGuard();

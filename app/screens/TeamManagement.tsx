@@ -16,49 +16,51 @@ import { getTournamentById } from '../../data/tournaments';
 import Sidebar from '../../components/Sidebar';
 import ModalityCard from '../../components/ModalityCard';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
-import { KumiteTheme as T } from '../../constants/theme';
+import { useKumiteTheme } from '../../context/ThemeContext';
 
 type Tab = 'team' | 'add';
 
-const s = {
-  page:        { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
-  maxW:        { maxWidth: 860, margin: '0 auto' },
-  pageTitle:   { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 6 },
-  pageSub:     { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 24 },
-  tabs:        { display: 'flex', borderBottom: `2px solid ${T.colors.border}`, marginBottom: 24 },
-  tab:         (active: boolean): any => ({
-    padding: '10px 22px', background: 'none', border: 'none',
-    borderBottom: active ? `2px solid ${T.colors.primary}` : '2px solid transparent',
-    color: active ? T.colors.primary : T.colors.textLight,
-    fontWeight: active ? T.font.weight.bold : T.font.weight.normal,
-    cursor: 'pointer', fontSize: T.font.size.lg, fontFamily: 'inherit', marginBottom: -2,
-  }),
-  // Athlete card
-  athleteCard: { background: T.colors.card, borderRadius: T.radius.lg, padding: 20, marginBottom: 14, boxShadow: T.shadow.card },
-  cardHeader:  { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 },
-  avatar:      { width: 48, height: 48, borderRadius: '50%', background: T.colors.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 },
-  athleteMeta: { flex: 1 },
-  athleteName: { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 2 },
-  athleteSub:  { fontSize: T.font.size.md, color: T.colors.muted },
-  btnRow:      { display: 'flex', gap: 8, flexWrap: 'wrap' as const },
-  enrollBtn:   { padding: '6px 14px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
-  removeBtn:   { padding: '6px 14px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
-  // Registrations inside athlete card
-  regsLabel:   { fontSize: T.font.size.md, fontWeight: T.font.weight.semibold, color: T.colors.muted, marginBottom: 8 },
-  modalGrid:   { display: 'flex', flexWrap: 'wrap' as const, gap: 8 },
-  noRegs:      { fontSize: T.font.size.md, color: T.colors.mutedLight, fontStyle: 'italic' },
-  // Add athlete tab
-  addCard:     { background: T.colors.card, borderRadius: T.radius.lg, padding: 20, marginBottom: 12, boxShadow: T.shadow.card, display: 'flex', alignItems: 'center', gap: 14 },
-  addBtn:      { padding: '7px 18px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.md, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 },
-  alreadyBadge:{ padding: '6px 14px', background: T.colors.successLight, border: `1px solid #a5d6a7`, borderRadius: T.radius.xl, color: T.colors.success, fontSize: T.font.size.md, fontWeight: T.font.weight.semibold },
-  // Empty / loading
-  loading:     { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
-  empty:       { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
-  emptyIcon:   { fontSize: 52, display: 'block', marginBottom: 14 },
-  emptyTxt:    { fontSize: T.font.size.xl, marginBottom: 8 },
-} as const;
-
 export default function TeamManagement() {
+  const T = useKumiteTheme();
+  const s = {
+    page:        { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
+    maxW:        { maxWidth: 860, margin: '0 auto' },
+    pageTitle:   { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 6 },
+    pageSub:     { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 24 },
+    tabs:        { display: 'flex', borderBottom: `2px solid ${T.colors.border}`, marginBottom: 24 },
+    tab:         (active: boolean): any => ({
+      padding: '10px 22px', background: 'none', border: 'none',
+      borderBottom: active ? `2px solid ${T.colors.primary}` : '2px solid transparent',
+      color: active ? T.colors.primary : T.colors.textLight,
+      fontWeight: active ? T.font.weight.bold : T.font.weight.normal,
+      cursor: 'pointer', fontSize: T.font.size.lg, fontFamily: 'inherit', marginBottom: -2,
+    }),
+    // Athlete card
+    athleteCard: { background: T.colors.card, borderRadius: T.radius.lg, padding: 20, marginBottom: 14, boxShadow: T.shadow.card },
+    cardHeader:  { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 },
+    avatar:      { width: 48, height: 48, borderRadius: '50%', background: T.colors.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 },
+    athleteMeta: { flex: 1 },
+    athleteName: { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 2 },
+    athleteSub:  { fontSize: T.font.size.md, color: T.colors.muted },
+    btnRow:      { display: 'flex', gap: 8, flexWrap: 'wrap' as const },
+    enrollBtn:   { padding: '6px 14px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
+    removeBtn:   { padding: '6px 14px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
+    // Registrations inside athlete card
+    regsLabel:   { fontSize: T.font.size.md, fontWeight: T.font.weight.semibold, color: T.colors.muted, marginBottom: 8 },
+    modalGrid:   { display: 'flex', flexWrap: 'wrap' as const, gap: 8 },
+    noRegs:      { fontSize: T.font.size.md, color: T.colors.mutedLight, fontStyle: 'italic' },
+    // Add athlete tab
+    addCard:     { background: T.colors.card, borderRadius: T.radius.lg, padding: 20, marginBottom: 12, boxShadow: T.shadow.card, display: 'flex', alignItems: 'center', gap: 14 },
+    addBtn:      { padding: '7px 18px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.md, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 },
+    alreadyBadge:{ padding: '6px 14px', background: T.colors.successLight, border: `1px solid #a5d6a7`, borderRadius: T.radius.xl, color: T.colors.success, fontSize: T.font.size.md, fontWeight: T.font.weight.semibold },
+    // Empty / loading
+    loading:     { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
+    empty:       { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
+    emptyIcon:   { fontSize: 52, display: 'block', marginBottom: 14 },
+    emptyTxt:    { fontSize: T.font.size.xl, marginBottom: 8 },
+  } as const;
+
+
   const router = useRouter();
   const { currentUser, isLoading } = useAuthGuard();
 

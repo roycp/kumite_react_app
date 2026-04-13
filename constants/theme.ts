@@ -71,6 +71,38 @@ export const KumiteTheme = {
   },
 } as const;
 
+// ── Dark theme — same token shape, dark palette from AI stitch designs ────────
+export const KumiteThemeDark = {
+  colors: {
+    primary:      '#c7bfff',
+    primaryLight: '#4331a8',
+    primaryAlt:   '#31353c',
+    dark:         '#dfe2eb',
+    success:      '#81c784',
+    successLight: '#1b5e20',
+    error:        '#ffb4ab',
+    errorLight:   '#93000a',
+    background:   '#10141a',
+    card:         '#1c2026',
+    border:       '#474553',
+    borderLight:  '#31353c',
+    muted:        '#928f9e',
+    mutedLight:   '#6e6b7a',
+    text:         '#dfe2eb',
+    textSub:      '#c9c4d5',
+    textLight:    '#a09cb0',
+  },
+  spacing:  KumiteTheme.spacing,
+  radius:   KumiteTheme.radius,
+  shadow: {
+    card:         '0 2px 16px rgba(0,0,0,0.4)',
+    modal:        '0 8px 40px rgba(0,0,0,0.6)',
+    input:        '0 2px 8px rgba(0,0,0,0.3)',
+    hoverPrimary: '0 4px 16px rgba(199,191,255,0.2)',
+  },
+  font:     KumiteTheme.font,
+} as const;
+
 const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
 

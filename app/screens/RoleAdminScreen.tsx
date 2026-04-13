@@ -11,7 +11,7 @@ import * as DB from '../../db/database';
 import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { usePermission } from '../../hooks/usePermission';
-import { KumiteTheme as T } from '../../constants/theme';
+import { useKumiteTheme } from '../../context/ThemeContext';
 import { ALL_PERMISSIONS, Permission } from '../../constants/permissions';
 
 const PERMISSION_LABELS: Record<Permission, string> = {
@@ -33,41 +33,43 @@ const PERMISSION_LABELS: Record<Permission, string> = {
 
 const EMPTY_FORM = { name: '', displayName: '', permissions: [] as string[] };
 
-const s = {
-  page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
-  maxW:       { maxWidth: 860, margin: '0 auto' },
-  pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 6 },
-  pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
-
-  card:       { background: T.colors.card, borderRadius: T.radius.lg, padding: '24px', marginBottom: 24, boxShadow: T.shadow.card },
-  cardTitle:  { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 16 },
-
-  label:      { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub, marginBottom: 6, display: 'block' as const },
-  input:      { width: '100%', padding: '9px 12px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.md, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const, marginBottom: 14 },
-  permGrid:   { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8, marginBottom: 16 },
-  permItem:   { display: 'flex', gap: 8, alignItems: 'center', fontSize: T.font.size.sm, color: T.colors.text },
-  checkbox:   { width: 16, height: 16, cursor: 'pointer' },
-
-  btnRow:     { display: 'flex', gap: 8 },
-  addBtn:     { padding: '8px 20px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: '#fff', fontSize: T.font.size.sm, fontWeight: T.font.weight.bold, cursor: 'pointer', fontFamily: 'inherit' },
-  saveBtn:    { padding: '8px 20px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: '#fff', fontSize: T.font.size.sm, fontWeight: T.font.weight.bold, cursor: 'pointer', fontFamily: 'inherit' },
-  cancelBtn:  { padding: '8px 16px', background: 'transparent', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, color: T.colors.textLight, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
-  editBtn:    { padding: '5px 14px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
-  delBtn:     { padding: '5px 14px', background: T.colors.errorLight, border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
-
-  roleRow:    { padding: '14px 0', borderBottom: `1px solid ${T.colors.borderLight}`, display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' as const } as any,
-  roleName:   { fontSize: T.font.size.base, fontWeight: T.font.weight.bold, color: T.colors.dark, minWidth: 160 },
-  roleDisplay:{ fontSize: T.font.size.sm, color: T.colors.muted, marginTop: 2 },
-  permTags:   { display: 'flex', flexWrap: 'wrap' as const, gap: 6, flex: 1 },
-  permTag:    { padding: '2px 8px', background: T.colors.primaryLight, borderRadius: T.radius.pill, fontSize: T.font.size.xs, color: T.colors.primary, fontWeight: T.font.weight.semibold },
-  roleActions:{ display: 'flex', gap: 6, alignItems: 'center' },
-
-  empty:      { textAlign: 'center' as const, padding: '32px 24px', color: T.colors.muted },
-  loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
-  error:      { color: T.colors.error, fontSize: T.font.size.sm, marginBottom: 12 },
-} as const;
-
 export default function RoleAdminScreen() {
+  const T = useKumiteTheme();
+  const s = {
+    page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
+    maxW:       { maxWidth: 860, margin: '0 auto' },
+    pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 6 },
+    pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
+  
+    card:       { background: T.colors.card, borderRadius: T.radius.lg, padding: '24px', marginBottom: 24, boxShadow: T.shadow.card },
+    cardTitle:  { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 16 },
+  
+    label:      { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub, marginBottom: 6, display: 'block' as const },
+    input:      { width: '100%', padding: '9px 12px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.md, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const, marginBottom: 14 },
+    permGrid:   { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8, marginBottom: 16 },
+    permItem:   { display: 'flex', gap: 8, alignItems: 'center', fontSize: T.font.size.sm, color: T.colors.text },
+    checkbox:   { width: 16, height: 16, cursor: 'pointer' },
+  
+    btnRow:     { display: 'flex', gap: 8 },
+    addBtn:     { padding: '8px 20px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: '#fff', fontSize: T.font.size.sm, fontWeight: T.font.weight.bold, cursor: 'pointer', fontFamily: 'inherit' },
+    saveBtn:    { padding: '8px 20px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: '#fff', fontSize: T.font.size.sm, fontWeight: T.font.weight.bold, cursor: 'pointer', fontFamily: 'inherit' },
+    cancelBtn:  { padding: '8px 16px', background: 'transparent', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, color: T.colors.textLight, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
+    editBtn:    { padding: '5px 14px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
+    delBtn:     { padding: '5px 14px', background: T.colors.errorLight, border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
+  
+    roleRow:    { padding: '14px 0', borderBottom: `1px solid ${T.colors.borderLight}`, display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' as const } as any,
+    roleName:   { fontSize: T.font.size.base, fontWeight: T.font.weight.bold, color: T.colors.dark, minWidth: 160 },
+    roleDisplay:{ fontSize: T.font.size.sm, color: T.colors.muted, marginTop: 2 },
+    permTags:   { display: 'flex', flexWrap: 'wrap' as const, gap: 6, flex: 1 },
+    permTag:    { padding: '2px 8px', background: T.colors.primaryLight, borderRadius: T.radius.pill, fontSize: T.font.size.xs, color: T.colors.primary, fontWeight: T.font.weight.semibold },
+    roleActions:{ display: 'flex', gap: 6, alignItems: 'center' },
+  
+    empty:      { textAlign: 'center' as const, padding: '32px 24px', color: T.colors.muted },
+    loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
+    error:      { color: T.colors.error, fontSize: T.font.size.sm, marginBottom: 12 },
+  } as const;
+
+
   const router = useRouter();
   const { currentUser, isLoading } = useAuthGuard();
   const canManage = usePermission('manage_users');

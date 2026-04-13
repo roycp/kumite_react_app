@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { KumiteTheme as T } from '../constants/theme';
+import { useKumiteTheme } from '../context/ThemeContext';
 import { countryFlag } from '../constants/countries';
 
 interface Props {
@@ -25,6 +25,7 @@ function orgAcronym(org: string): string {
 }
 
 export function BracketParticipantCard({ name, org, country, style, 'data-testid': testId }: Props) {
+  const T = useKumiteTheme();
   const flag = country ? countryFlag(country) : null;
 
   return (

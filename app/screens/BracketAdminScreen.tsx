@@ -12,7 +12,7 @@ import * as DB from '../../db/database';
 import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { usePermission } from '../../hooks/usePermission';
-import { KumiteTheme as T } from '../../constants/theme';
+import { useKumiteTheme } from '../../context/ThemeContext';
 import { groupByCategory, type BracketCategory as Category } from '../../utils/bracketUtils';
 import { BracketParticipantCard } from '../../components/BracketParticipantCard';
 
@@ -27,34 +27,36 @@ function moveItem<T>(arr: T[], from: number, to: number): T[] {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-const s = {
-  page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
-  maxW:       { maxWidth: 860, margin: '0 auto' },
-  backBtn:    { background: 'none', border: 'none', color: T.colors.primary, fontSize: T.font.size.base, cursor: 'pointer', marginBottom: 20, padding: 0, fontFamily: 'inherit' },
-  pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 4 },
-  pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
-
-  saveRow:    { display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 },
-  saveBtn:    { padding: '10px 28px', border: 'none', borderRadius: T.radius.xl, cursor: 'pointer', fontFamily: 'inherit', fontSize: T.font.size.base, background: T.colors.primary, color: '#fff', fontWeight: T.font.weight.bold },
-  savedMsg:   { fontSize: T.font.size.sm, color: T.colors.success, fontWeight: T.font.weight.semibold },
-
-  catCard:    { background: T.colors.card, borderRadius: T.radius.lg, padding: '20px 24px', marginBottom: 20, boxShadow: T.shadow.card },
-  catTitle:   { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.primary, marginBottom: 4 },
-  catCount:   { fontSize: T.font.size.sm, color: T.colors.muted, marginBottom: 16 },
-
-  athleteRow: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: T.radius.md, marginBottom: 6, background: T.colors.background, border: `1px solid ${T.colors.border}`, cursor: 'grab' },
-  athleteRowDragging: { opacity: 0.4 },
-  seed:       { fontSize: T.font.size.sm, color: T.colors.mutedLight, minWidth: 24, fontWeight: T.font.weight.bold, textAlign: 'center' as const },
-  name:       { flex: 1, fontSize: T.font.size.base, color: T.colors.dark, fontWeight: T.font.weight.semibold },
-  arrowBtn:   { background: 'none', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, cursor: 'pointer', padding: '2px 8px', fontSize: T.font.size.sm, color: T.colors.textSub, lineHeight: 1.5 },
-
-  empty:      { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
-  loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
-} as const;
-
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function BracketAdminScreen() {
+  const T = useKumiteTheme();
+  const s = {
+    page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
+    maxW:       { maxWidth: 860, margin: '0 auto' },
+    backBtn:    { background: 'none', border: 'none', color: T.colors.primary, fontSize: T.font.size.base, cursor: 'pointer', marginBottom: 20, padding: 0, fontFamily: 'inherit' },
+    pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 4 },
+    pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
+  
+    saveRow:    { display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 },
+    saveBtn:    { padding: '10px 28px', border: 'none', borderRadius: T.radius.xl, cursor: 'pointer', fontFamily: 'inherit', fontSize: T.font.size.base, background: T.colors.primary, color: '#fff', fontWeight: T.font.weight.bold },
+    savedMsg:   { fontSize: T.font.size.sm, color: T.colors.success, fontWeight: T.font.weight.semibold },
+  
+    catCard:    { background: T.colors.card, borderRadius: T.radius.lg, padding: '20px 24px', marginBottom: 20, boxShadow: T.shadow.card },
+    catTitle:   { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.primary, marginBottom: 4 },
+    catCount:   { fontSize: T.font.size.sm, color: T.colors.muted, marginBottom: 16 },
+  
+    athleteRow: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: T.radius.md, marginBottom: 6, background: T.colors.background, border: `1px solid ${T.colors.border}`, cursor: 'grab' },
+    athleteRowDragging: { opacity: 0.4 },
+    seed:       { fontSize: T.font.size.sm, color: T.colors.mutedLight, minWidth: 24, fontWeight: T.font.weight.bold, textAlign: 'center' as const },
+    name:       { flex: 1, fontSize: T.font.size.base, color: T.colors.dark, fontWeight: T.font.weight.semibold },
+    arrowBtn:   { background: 'none', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, cursor: 'pointer', padding: '2px 8px', fontSize: T.font.size.sm, color: T.colors.textSub, lineHeight: 1.5 },
+  
+    empty:      { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
+    loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
+  } as const;
+
+
   const router    = useRouter();
   const { currentUser, isLoading } = useAuthGuard();
   const canManage = usePermission('manage_tournaments');

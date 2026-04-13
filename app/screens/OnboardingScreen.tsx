@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth, RegisterData } from '../../context/AuthContext';
-import { KumiteTheme as T } from '../../constants/theme';
+import { useKumiteTheme } from '../../context/ThemeContext';
 import { COUNTRIES } from '../../constants/countries';
 
 type Step = 'role' | 'info' | 'details' | 'account';
@@ -24,40 +24,42 @@ const ROLE_CARDS: { role: Role; icon: string; title: string; desc: string }[] = 
   },
 ];
 
-const s = {
-  page:        { minHeight: '100vh', background: T.colors.background, padding: 16, fontFamily: T.font.family, overflowY: 'auto' as const },
-  card:        { maxWidth: 560, margin: '24px auto', background: T.colors.card, borderRadius: T.radius.lg, padding: 32, boxShadow: '0 2px 12px rgba(0,0,0,0.12)' },
-  progress:    { display: 'flex', gap: 8, marginBottom: 24 },
-  dot:         (active: boolean, done: boolean): any => ({
-    height: 6, flex: 1, borderRadius: 3,
-    background: done ? T.colors.primary : active ? '#9c7dd6' : T.colors.border,
-    transition: 'background 0.3s',
-  }),
-  stepNote:    { fontSize: T.font.size.sm, color: '#999', marginBottom: 20 },
-  title:       { fontSize: T.font.size['3xl'], fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 4 },
-  sub:         { color: T.colors.textLight, fontSize: T.font.size.base, marginBottom: 24 },
-  field:       { marginBottom: 18 },
-  label:       { display: 'block', fontSize: T.font.size.md, color: T.colors.textSub, marginBottom: 5, fontWeight: T.font.weight.medium },
-  input:       { width: '100%', height: 48, border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, padding: '0 14px', fontSize: T.font.size.lg, boxSizing: 'border-box' as const, fontFamily: 'inherit', outline: 'none' },
-  select:      { width: '100%', height: 48, border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, paddingLeft: 14, fontSize: T.font.size.lg, boxSizing: 'border-box' as const, background: T.colors.card, fontFamily: 'inherit' },
-  errorBox:    { color: T.colors.error, fontSize: T.font.size.md, marginBottom: 16, padding: '10px 14px', background: T.colors.errorLight, borderRadius: T.radius.sm },
-  actions:     { display: 'flex', gap: 12, marginTop: 28 },
-  btnPrimary:  { flex: 2, padding: 14, background: T.colors.primary, border: 'none', borderRadius: T.radius.pill, color: T.colors.card, fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, cursor: 'pointer', fontFamily: 'inherit' },
-  btnBack:     { flex: 1, padding: 14, background: 'transparent', border: `1px solid #ccc`, borderRadius: T.radius.pill, color: T.colors.textLight, fontSize: T.font.size.lg, cursor: 'pointer', fontFamily: 'inherit' },
-  // Role cards
-  roleGrid:    { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 8 },
-  roleCard:    (selected: boolean): any => ({
-    padding: '22px 16px', border: `2px solid ${selected ? T.colors.primary : T.colors.border}`,
-    borderRadius: T.radius.lg, cursor: 'pointer', textAlign: 'center' as const,
-    background: selected ? T.colors.primaryLight : T.colors.card,
-    transition: 'all 0.15s',
-  }),
-  roleIcon:    { fontSize: 40, display: 'block', marginBottom: 10 },
-  roleTitle:   { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 6 },
-  roleDesc:    { fontSize: T.font.size.md, color: T.colors.muted, lineHeight: 1.4 },
-} as const;
-
 export default function OnboardingScreen() {
+  const T = useKumiteTheme();
+  const s = {
+    page:        { minHeight: '100vh', background: T.colors.background, padding: 16, fontFamily: T.font.family, overflowY: 'auto' as const },
+    card:        { maxWidth: 560, margin: '24px auto', background: T.colors.card, borderRadius: T.radius.lg, padding: 32, boxShadow: '0 2px 12px rgba(0,0,0,0.12)' },
+    progress:    { display: 'flex', gap: 8, marginBottom: 24 },
+    dot:         (active: boolean, done: boolean): any => ({
+      height: 6, flex: 1, borderRadius: 3,
+      background: done ? T.colors.primary : active ? '#9c7dd6' : T.colors.border,
+      transition: 'background 0.3s',
+    }),
+    stepNote:    { fontSize: T.font.size.sm, color: '#999', marginBottom: 20 },
+    title:       { fontSize: T.font.size['3xl'], fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 4 },
+    sub:         { color: T.colors.textLight, fontSize: T.font.size.base, marginBottom: 24 },
+    field:       { marginBottom: 18 },
+    label:       { display: 'block', fontSize: T.font.size.md, color: T.colors.textSub, marginBottom: 5, fontWeight: T.font.weight.medium },
+    input:       { width: '100%', height: 48, border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, padding: '0 14px', fontSize: T.font.size.lg, boxSizing: 'border-box' as const, fontFamily: 'inherit', outline: 'none' },
+    select:      { width: '100%', height: 48, border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, paddingLeft: 14, fontSize: T.font.size.lg, boxSizing: 'border-box' as const, background: T.colors.card, fontFamily: 'inherit' },
+    errorBox:    { color: T.colors.error, fontSize: T.font.size.md, marginBottom: 16, padding: '10px 14px', background: T.colors.errorLight, borderRadius: T.radius.sm },
+    actions:     { display: 'flex', gap: 12, marginTop: 28 },
+    btnPrimary:  { flex: 2, padding: 14, background: T.colors.primary, border: 'none', borderRadius: T.radius.pill, color: T.colors.card, fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, cursor: 'pointer', fontFamily: 'inherit' },
+    btnBack:     { flex: 1, padding: 14, background: 'transparent', border: `1px solid #ccc`, borderRadius: T.radius.pill, color: T.colors.textLight, fontSize: T.font.size.lg, cursor: 'pointer', fontFamily: 'inherit' },
+    // Role cards
+    roleGrid:    { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 8 },
+    roleCard:    (selected: boolean): any => ({
+      padding: '22px 16px', border: `2px solid ${selected ? T.colors.primary : T.colors.border}`,
+      borderRadius: T.radius.lg, cursor: 'pointer', textAlign: 'center' as const,
+      background: selected ? T.colors.primaryLight : T.colors.card,
+      transition: 'all 0.15s',
+    }),
+    roleIcon:    { fontSize: 40, display: 'block', marginBottom: 10 },
+    roleTitle:   { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 6 },
+    roleDesc:    { fontSize: T.font.size.md, color: T.colors.muted, lineHeight: 1.4 },
+  } as const;
+
+
   const router = useRouter();
   const { register } = useAuth();
 

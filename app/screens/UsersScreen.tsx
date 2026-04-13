@@ -12,7 +12,7 @@ import * as DB from '../../db/database';
 import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { usePermission } from '../../hooks/usePermission';
-import { KumiteTheme as T } from '../../constants/theme';
+import { useKumiteTheme } from '../../context/ThemeContext';
 
 const ROLE_LABELS: Record<string, string> = {
   athlete:   'Atleta',
@@ -21,50 +21,6 @@ const ROLE_LABELS: Record<string, string> = {
   organizer: 'Organizador',
 };
 
-const ROLE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  athlete:   { bg: '#e3f2fd', text: '#1565c0', border: '#90caf9' },
-  manager:   { bg: '#fff3e0', text: '#e65100', border: '#ffcc02' },
-  admin:     { bg: T.colors.primaryLight, text: T.colors.primary, border: '#c4b5fd' },
-  organizer: { bg: '#e8f5e9', text: '#2e7d32', border: '#a5d6a7' },
-};
-
-const s = {
-  page:      { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
-  maxW:      { maxWidth: 860, margin: '0 auto' },
-  pageTitle: { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 6 },
-  pageSub:   { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
-
-  tableCard: { background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card, overflow: 'hidden' as const, marginBottom: 24 },
-  tableHead: { display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 120px', gap: 0, background: T.colors.borderLight, padding: '10px 20px', borderBottom: `1px solid ${T.colors.border}` } as any,
-  thCell:    { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub, textTransform: 'uppercase' as const, letterSpacing: '0.04em' },
-  row:       { display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 120px', gap: 0, padding: '14px 20px', borderBottom: `1px solid ${T.colors.borderLight}`, alignItems: 'center' } as any,
-  rowLast:   { borderBottom: 'none' },
-  cell:      { fontSize: T.font.size.base, color: T.colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  nameCell:  { fontSize: T.font.size.base, fontWeight: T.font.weight.semibold, color: T.colors.dark, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  emailCell: { fontSize: T.font.size.sm, color: T.colors.textSub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-
-  roleBadge: (role: string) => ({
-    display: 'inline-block',
-    padding: '3px 10px',
-    borderRadius: T.radius.pill,
-    fontSize: T.font.size.sm,
-    fontWeight: T.font.weight.semibold,
-    background: ROLE_COLORS[role]?.bg ?? T.colors.borderLight,
-    color:      ROLE_COLORS[role]?.text ?? T.colors.textSub,
-    border:     `1px solid ${ROLE_COLORS[role]?.border ?? T.colors.border}`,
-  }),
-
-  select:    { padding: '5px 8px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.sm, fontFamily: 'inherit', outline: 'none', background: T.colors.card, width: '100%', boxSizing: 'border-box' as const },
-  editBtn:   { padding: '4px 12px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
-  saveBtn:   { padding: '4px 12px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', marginRight: 4 },
-  cancelBtn: { padding: '4px 10px', background: 'transparent', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, color: T.colors.textLight, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
-
-  listTitle: { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
-  empty:     { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
-  emptyIcon: { fontSize: 52, display: 'block', marginBottom: 14 },
-  emptyTxt:  { fontSize: T.font.size.xl },
-  loading:   { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
-} as const;
 
 const BUILT_IN_ROLES = [
   { name: 'athlete',   displayName: 'Atleta' },
@@ -74,6 +30,54 @@ const BUILT_IN_ROLES = [
 ];
 
 export default function UsersScreen() {
+  const T = useKumiteTheme();
+
+  const ROLE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+    athlete:   { bg: '#e3f2fd', text: '#1565c0', border: '#90caf9' },
+    manager:   { bg: '#fff3e0', text: '#e65100', border: '#ffcc02' },
+    admin:     { bg: T.colors.primaryLight, text: T.colors.primary, border: '#c4b5fd' },
+    organizer: { bg: '#e8f5e9', text: '#2e7d32', border: '#a5d6a7' },
+  };
+
+  const s = {
+    page:      { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
+    maxW:      { maxWidth: 860, margin: '0 auto' },
+    pageTitle: { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 6 },
+    pageSub:   { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
+  
+    tableCard: { background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card, overflow: 'hidden' as const, marginBottom: 24 },
+    tableHead: { display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 120px', gap: 0, background: T.colors.borderLight, padding: '10px 20px', borderBottom: `1px solid ${T.colors.border}` } as any,
+    thCell:    { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub, textTransform: 'uppercase' as const, letterSpacing: '0.04em' },
+    row:       { display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 120px', gap: 0, padding: '14px 20px', borderBottom: `1px solid ${T.colors.borderLight}`, alignItems: 'center' } as any,
+    rowLast:   { borderBottom: 'none' },
+    cell:      { fontSize: T.font.size.base, color: T.colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+    nameCell:  { fontSize: T.font.size.base, fontWeight: T.font.weight.semibold, color: T.colors.dark, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+    emailCell: { fontSize: T.font.size.sm, color: T.colors.textSub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+  
+    roleBadge: (role: string) => ({
+      display: 'inline-block',
+      padding: '3px 10px',
+      borderRadius: T.radius.pill,
+      fontSize: T.font.size.sm,
+      fontWeight: T.font.weight.semibold,
+      background: ROLE_COLORS[role]?.bg ?? T.colors.borderLight,
+      color:      ROLE_COLORS[role]?.text ?? T.colors.textSub,
+      border:     `1px solid ${ROLE_COLORS[role]?.border ?? T.colors.border}`,
+    }),
+  
+    select:    { padding: '5px 8px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.sm, fontFamily: 'inherit', outline: 'none', background: T.colors.card, width: '100%', boxSizing: 'border-box' as const },
+    editBtn:   { padding: '4px 12px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
+    saveBtn:   { padding: '4px 12px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', marginRight: 4 },
+    cancelBtn: { padding: '4px 10px', background: 'transparent', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, color: T.colors.textLight, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
+  
+    listTitle: { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
+    empty:     { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
+    emptyIcon: { fontSize: 52, display: 'block', marginBottom: 14 },
+    emptyTxt:  { fontSize: T.font.size.xl },
+    loading:   { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
+  } as const;
+
+
   const router = useRouter();
   const { currentUser, isLoading } = useAuthGuard();
   const canManage = usePermission('manage_users');

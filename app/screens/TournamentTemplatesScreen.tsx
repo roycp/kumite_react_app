@@ -12,7 +12,7 @@ import * as DB from '../../db/database';
 import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { usePermission } from '../../hooks/usePermission';
-import { KumiteTheme as T } from '../../constants/theme';
+import { useKumiteTheme } from '../../context/ThemeContext';
 
 const MODALITY_OPTIONS = ['Kata', 'Kumite', 'Gi', 'No-Gi'];
 
@@ -29,54 +29,56 @@ type FormState = typeof EMPTY_FORM;
 const EMPTY_WC: Omit<WeightClass, 'id'> = { label: '', minKg: null, maxKg: null };
 const EMPTY_CAT: Omit<Category, 'id'>   = { name: '', discipline: 'Kata', gender: 'Mixto', ageGroup: 'Todos', rankRange: '' };
 
-const s = {
-  page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
-  maxW:       { maxWidth: 900, margin: '0 auto' },
-  pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 6 },
-  pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
-
-  formCard:   { background: T.colors.card, borderRadius: T.radius.lg, padding: 20, marginBottom: 24, boxShadow: T.shadow.card },
-  formTitle:  { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 14 },
-  sectionHd:  { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub, textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 8, marginTop: 14 },
-  inputWrap:  { display: 'flex', flexDirection: 'column' as const, gap: 4, marginBottom: 10 },
-  label:      { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub },
-  input:      { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const },
-  textarea:   { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const, resize: 'vertical' as const, minHeight: 56 },
-  select:     { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', background: T.colors.card, width: '100%', boxSizing: 'border-box' as const },
-  smInput:    { padding: '6px 8px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.sm, fontFamily: 'inherit', outline: 'none', width: 80, boxSizing: 'border-box' as const },
-  smSelect:   { padding: '6px 8px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.sm, fontFamily: 'inherit', outline: 'none', background: T.colors.card, flex: 1 },
-
-  checkRow:   { display: 'flex', flexWrap: 'wrap' as const, gap: 10 },
-  checkLabel: { display: 'flex', alignItems: 'center', gap: 5, fontSize: T.font.size.base, color: T.colors.text, cursor: 'pointer' },
-
-  subCard:    { background: T.colors.borderLight, borderRadius: T.radius.md, padding: '10px 12px', marginBottom: 8 },
-  subRow:     { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const },
-
-  btnPrimary: { padding: '9px 22px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.base, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const },
-  btnGhost:   { padding: '8px 16px', background: 'transparent', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, color: T.colors.textLight, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
-  btnAdd:     { padding: '6px 14px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const },
-  btnRemove:  { padding: '4px 10px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
-
-  tplCard:    { background: T.colors.card, borderRadius: T.radius.lg, padding: '16px 20px', marginBottom: 12, boxShadow: T.shadow.card },
-  tplName:    { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 4 },
-  tplDesc:    { fontSize: T.font.size.sm, color: T.colors.muted, marginBottom: 8 },
-  chips:      { display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 6 },
-  chip:       { display: 'inline-block', padding: '2px 10px', background: T.colors.primaryLight, color: T.colors.primary, borderRadius: T.radius.pill, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold },
-  metaLine:   { fontSize: T.font.size.sm, color: T.colors.muted, marginBottom: 6 },
-  btnRow:     { display: 'flex', gap: 8, marginTop: 8 },
-  editBtn:    { padding: '5px 14px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
-  deleteBtn:  { padding: '5px 14px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
-
-  listTitle:  { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
-  empty:      { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
-  emptyIcon:  { fontSize: 52, display: 'block', marginBottom: 14 },
-  emptyTxt:   { fontSize: T.font.size.xl },
-  loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
-} as const;
-
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
 
 export default function TournamentTemplatesScreen() {
+  const T = useKumiteTheme();
+  const s = {
+    page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
+    maxW:       { maxWidth: 900, margin: '0 auto' },
+    pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 6 },
+    pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
+  
+    formCard:   { background: T.colors.card, borderRadius: T.radius.lg, padding: 20, marginBottom: 24, boxShadow: T.shadow.card },
+    formTitle:  { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 14 },
+    sectionHd:  { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub, textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 8, marginTop: 14 },
+    inputWrap:  { display: 'flex', flexDirection: 'column' as const, gap: 4, marginBottom: 10 },
+    label:      { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub },
+    input:      { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const },
+    textarea:   { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const, resize: 'vertical' as const, minHeight: 56 },
+    select:     { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', background: T.colors.card, width: '100%', boxSizing: 'border-box' as const },
+    smInput:    { padding: '6px 8px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.sm, fontFamily: 'inherit', outline: 'none', width: 80, boxSizing: 'border-box' as const },
+    smSelect:   { padding: '6px 8px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.sm, fontFamily: 'inherit', outline: 'none', background: T.colors.card, flex: 1 },
+  
+    checkRow:   { display: 'flex', flexWrap: 'wrap' as const, gap: 10 },
+    checkLabel: { display: 'flex', alignItems: 'center', gap: 5, fontSize: T.font.size.base, color: T.colors.text, cursor: 'pointer' },
+  
+    subCard:    { background: T.colors.borderLight, borderRadius: T.radius.md, padding: '10px 12px', marginBottom: 8 },
+    subRow:     { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const },
+  
+    btnPrimary: { padding: '9px 22px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.base, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const },
+    btnGhost:   { padding: '8px 16px', background: 'transparent', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, color: T.colors.textLight, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
+    btnAdd:     { padding: '6px 14px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const },
+    btnRemove:  { padding: '4px 10px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
+  
+    tplCard:    { background: T.colors.card, borderRadius: T.radius.lg, padding: '16px 20px', marginBottom: 12, boxShadow: T.shadow.card },
+    tplName:    { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 4 },
+    tplDesc:    { fontSize: T.font.size.sm, color: T.colors.muted, marginBottom: 8 },
+    chips:      { display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 6 },
+    chip:       { display: 'inline-block', padding: '2px 10px', background: T.colors.primaryLight, color: T.colors.primary, borderRadius: T.radius.pill, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold },
+    metaLine:   { fontSize: T.font.size.sm, color: T.colors.muted, marginBottom: 6 },
+    btnRow:     { display: 'flex', gap: 8, marginTop: 8 },
+    editBtn:    { padding: '5px 14px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
+    deleteBtn:  { padding: '5px 14px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
+  
+    listTitle:  { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
+    empty:      { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
+    emptyIcon:  { fontSize: 52, display: 'block', marginBottom: 14 },
+    emptyTxt:   { fontSize: T.font.size.xl },
+    loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
+  } as const;
+
+
   const router = useRouter();
   const { currentUser, isLoading } = useAuthGuard();
   const canManage = usePermission('manage_tournaments');

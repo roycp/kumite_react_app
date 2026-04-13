@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import { useRouter, usePathname } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { hasPermission } from '../constants/permissions';
+import { useTheme } from '../context/ThemeContext';
 
 interface NavItem {
   icon: string;
@@ -58,6 +59,7 @@ export default function Sidebar({ children }: SidebarProps) {
   const router   = useRouter();
   const pathname = usePathname();
   const { currentUser, roleDefinitions, logout } = useAuth();
+  const { isDark } = useTheme();
 
   const [open, setOpen] = useState(false);
 
@@ -99,46 +101,56 @@ export default function Sidebar({ children }: SidebarProps) {
 
   const isActive = (route: string) => pathname === route || pathname.startsWith(route + '?');
 
+  // Theme-aware sidebar colors
+  const sbBg      = isDark ? '#0d1117' : '#1a1a2e';
+  const sbActive  = isDark ? 'rgba(199,191,255,0.2)' : 'rgba(103,80,164,0.35)';
+  const sbBorder  = isDark ? '#c7bfff'               : '#6750a4';
+  const sbLabel   = isDark ? '#c7bfff'               : '#c4b5fd';
+  const sbMuted   = isDark ? '#9090a8'               : '#a0b4c8';
+  const sbDivider = isDark ? 'rgba(199,191,255,0.12)': 'rgba(255,255,255,0.08)';
+  const avatarBg  = isDark ? '#4331a8'               : '#6750a4';
+
   const s: any = {
     // Layout wrapper
     shell:      { display: 'flex', minHeight: '100vh', fontFamily: 'Roboto, sans-serif', position: 'relative' as const, overflowX: 'hidden' as const },
 
     // ── Sidebar ──
     sidebar:    (visible: boolean) => ({
-      width: 240, background: '#1a1a2e', display: 'flex', flexDirection: 'column',
+      width: 240, background: sbBg, display: 'flex', flexDirection: 'column',
       position: 'fixed' as const, top: 0, left: visible ? 0 : -240, bottom: 0, zIndex: 200,
-      transition: 'left 0.25s ease', boxShadow: visible ? '4px 0 20px rgba(0,0,0,0.4)' : 'none',
+      transition: 'left 0.25s ease, background 0.25s', boxShadow: visible ? '4px 0 20px rgba(0,0,0,0.4)' : 'none',
     }),
     // Always-visible desktop strip
     desktopSidebar: {
-      width: 240, background: '#1a1a2e', display: 'flex', flexDirection: 'column',
+      width: 240, background: sbBg, display: 'flex', flexDirection: 'column',
       position: 'fixed' as const, top: 0, left: 0, bottom: 0, zIndex: 100,
+      transition: 'background 0.25s',
     },
 
     // Sidebar header (user badge)
-    sbHeader:   { padding: '28px 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)' },
-    sbAvatar:   { width: 44, height: 44, borderRadius: '50%', background: '#6750a4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, marginBottom: 10 },
+    sbHeader:   { padding: '28px 20px 20px', borderBottom: `1px solid ${sbDivider}` },
+    sbAvatar:   { width: 44, height: 44, borderRadius: '50%', background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, marginBottom: 10 },
     sbName:     { fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-    sbEmail:    { fontSize: 11, color: '#a0b4c8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+    sbEmail:    { fontSize: 11, color: sbMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
 
     // Nav items
     nav:        { flex: 1, padding: '12px 0', overflowY: 'auto' as const },
     navItem:    (active: boolean) => ({
       display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px',
       cursor: 'pointer', borderRadius: 0, transition: 'background 0.15s',
-      background: active ? 'rgba(103,80,164,0.35)' : 'transparent',
-      borderLeft: active ? '3px solid #6750a4' : '3px solid transparent',
+      background: active ? sbActive : 'transparent',
+      borderLeft: active ? `3px solid ${sbBorder}` : '3px solid transparent',
     }),
     navIcon:    { fontSize: 20, width: 24, textAlign: 'center' as const },
-    navLabel:   (active: boolean) => ({ fontSize: 14, fontWeight: active ? 700 : 400, color: active ? '#c4b5fd' : '#a0b4c8' }),
+    navLabel:   (active: boolean) => ({ fontSize: 14, fontWeight: active ? 700 : 400, color: active ? sbLabel : sbMuted }),
 
     // Logout at bottom
-    sbFooter:   { padding: '12px 0', borderTop: '1px solid rgba(255,255,255,0.08)' },
+    sbFooter:   { padding: '12px 0', borderTop: `1px solid ${sbDivider}` },
     logoutItem: { display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px', cursor: 'pointer', transition: 'background 0.15s' },
     logoutLabel:{ fontSize: 14, color: '#f87171' },
 
     // ── Top bar (mobile) ──
-    topBar:     { display: 'none', position: 'fixed' as const, top: 0, left: 0, right: 0, zIndex: 150, height: 56, background: '#1a1a2e', alignItems: 'center', padding: '0 16px', gap: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.3)' },
+    topBar:     { display: 'none', position: 'fixed' as const, top: 0, left: 0, right: 0, zIndex: 150, height: 56, background: sbBg, alignItems: 'center', padding: '0 16px', gap: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.3)', transition: 'background 0.25s' },
     burger:     { fontSize: 22, cursor: 'pointer', color: '#fff', background: 'none', border: 'none', padding: 4 },
     topTitle:   { fontSize: 18, fontWeight: 700, color: '#fff' },
 

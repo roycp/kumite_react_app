@@ -11,7 +11,7 @@ import * as DB from '../../db/database';
 import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { usePermission } from '../../hooks/usePermission';
-import { KumiteTheme as T } from '../../constants/theme';
+import { useKumiteTheme } from '../../context/ThemeContext';
 
 type Classification = 'beginner' | 'advanced';
 type ApplicableTo   = 'children' | 'adults' | 'both';
@@ -27,52 +27,54 @@ const APPLICABLE_LABELS: Record<ApplicableTo, string> = {
   both:     'Todos',
 };
 
-const CHIP_COLORS: Record<string, { bg: string; color: string }> = {
-  beginner: { bg: T.colors.successLight,  color: T.colors.success },
-  advanced: { bg: T.colors.primaryAlt,    color: T.colors.primary },
-  children: { bg: '#fff3e0',              color: '#e65100' },
-  adults:   { bg: '#e3f2fd',              color: '#1565c0' },
-  both:     { bg: T.colors.borderLight,   color: T.colors.muted },
-};
-
-const s = {
-  page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
-  maxW:       { maxWidth: 760, margin: '0 auto' },
-  breadcrumb: { fontSize: T.font.size.sm, color: T.colors.muted, marginBottom: 8, cursor: 'pointer' as const, display: 'inline-block' as const },
-  pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 4 },
-  pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
-
-  formCard:   { background: T.colors.card, borderRadius: T.radius.lg, padding: 20, marginBottom: 24, boxShadow: T.shadow.card },
-  formTitle:  { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 14 },
-  formGrid:   { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, marginBottom: 12 } as any,
-  inputWrap:  { display: 'flex', flexDirection: 'column' as const, gap: 4 },
-  label:      { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub },
-  input:      { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const },
-  select:     { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', background: T.colors.card, width: '100%', boxSizing: 'border-box' as const },
-  btnPrimary: { padding: '9px 22px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.base, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const },
-  btnGhost:   { padding: '8px 16px', background: 'transparent', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, color: T.colors.textLight, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
-
-  rankCard:   { background: T.colors.card, borderRadius: T.radius.lg, padding: '14px 18px', marginBottom: 10, boxShadow: T.shadow.card },
-  rankHeader: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 },
-  rankNum:    { width: 32, height: 32, borderRadius: '50%', background: T.colors.primaryLight, color: T.colors.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: T.font.weight.bold, fontSize: T.font.size.sm, flexShrink: 0 } as any,
-  rankName:   { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, flex: 1 },
-  rankDesc:   { fontSize: T.font.size.md, color: T.colors.muted, marginBottom: 8, marginLeft: 44 },
-  chipRow:    { display: 'flex', gap: 6, marginLeft: 44, flexWrap: 'wrap' as const, marginBottom: 8 },
-  chip:       (key: string): any => ({ padding: '3px 10px', borderRadius: T.radius.pill, fontSize: T.font.size.xs, fontWeight: T.font.weight.semibold, ...(CHIP_COLORS[key] ?? { bg: T.colors.borderLight, color: T.colors.muted }), background: (CHIP_COLORS[key] ?? {}).bg }),
-  btnRow:     { display: 'flex', gap: 8, marginLeft: 44 },
-  editBtn:    { padding: '4px 12px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
-  deleteBtn:  { padding: '4px 12px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
-
-  listTitle:  { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
-  empty:      { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
-  emptyIcon:  { fontSize: 48, display: 'block', marginBottom: 14 },
-  emptyTxt:   { fontSize: T.font.size.xl },
-  loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
-} as const;
-
 const EMPTY_FORM = { name: '', description: '', rank: '', classification: 'beginner' as Classification, applicableTo: 'both' as ApplicableTo };
 
 export default function RankSystemsScreen() {
+  const T = useKumiteTheme();
+
+  const CHIP_COLORS: Record<string, { bg: string; color: string }> = {
+    beginner: { bg: T.colors.successLight,  color: T.colors.success },
+    advanced: { bg: T.colors.primaryAlt,    color: T.colors.primary },
+    children: { bg: '#fff3e0',              color: '#e65100' },
+    adults:   { bg: '#e3f2fd',              color: '#1565c0' },
+    both:     { bg: T.colors.borderLight,   color: T.colors.muted },
+  };
+  const s = {
+    page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
+    maxW:       { maxWidth: 760, margin: '0 auto' },
+    breadcrumb: { fontSize: T.font.size.sm, color: T.colors.muted, marginBottom: 8, cursor: 'pointer' as const, display: 'inline-block' as const },
+    pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 4 },
+    pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
+  
+    formCard:   { background: T.colors.card, borderRadius: T.radius.lg, padding: 20, marginBottom: 24, boxShadow: T.shadow.card },
+    formTitle:  { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 14 },
+    formGrid:   { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, marginBottom: 12 } as any,
+    inputWrap:  { display: 'flex', flexDirection: 'column' as const, gap: 4 },
+    label:      { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub },
+    input:      { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const },
+    select:     { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', background: T.colors.card, width: '100%', boxSizing: 'border-box' as const },
+    btnPrimary: { padding: '9px 22px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.base, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const },
+    btnGhost:   { padding: '8px 16px', background: 'transparent', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, color: T.colors.textLight, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
+  
+    rankCard:   { background: T.colors.card, borderRadius: T.radius.lg, padding: '14px 18px', marginBottom: 10, boxShadow: T.shadow.card },
+    rankHeader: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 },
+    rankNum:    { width: 32, height: 32, borderRadius: '50%', background: T.colors.primaryLight, color: T.colors.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: T.font.weight.bold, fontSize: T.font.size.sm, flexShrink: 0 } as any,
+    rankName:   { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, flex: 1 },
+    rankDesc:   { fontSize: T.font.size.md, color: T.colors.muted, marginBottom: 8, marginLeft: 44 },
+    chipRow:    { display: 'flex', gap: 6, marginLeft: 44, flexWrap: 'wrap' as const, marginBottom: 8 },
+    chip:       (key: string): any => ({ padding: '3px 10px', borderRadius: T.radius.pill, fontSize: T.font.size.xs, fontWeight: T.font.weight.semibold, ...(CHIP_COLORS[key] ?? { bg: T.colors.borderLight, color: T.colors.muted }), background: (CHIP_COLORS[key] ?? {}).bg }),
+    btnRow:     { display: 'flex', gap: 8, marginLeft: 44 },
+    editBtn:    { padding: '4px 12px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
+    deleteBtn:  { padding: '4px 12px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
+  
+    listTitle:  { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
+    empty:      { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
+    emptyIcon:  { fontSize: 48, display: 'block', marginBottom: 14 },
+    emptyTxt:   { fontSize: T.font.size.xl },
+    loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
+  } as const;
+
+
   const router = useRouter();
   const { martialArtId = '', martialArtName = 'Arte Marcial' } = useLocalSearchParams<{ martialArtId: string; martialArtName: string }>();
 

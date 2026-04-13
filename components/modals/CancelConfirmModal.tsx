@@ -1,33 +1,6 @@
 import React from 'react';
 import type { Registration } from '../../db/database';
-import { KumiteTheme as T } from '../../constants/theme';
-
-const s = {
-  overlay:    {
-    position: 'fixed' as const, inset: 0,
-    background: 'rgba(0,0,0,0.5)', zIndex: 500,
-    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-  },
-  modal:      {
-    background: T.colors.card, borderRadius: T.radius.lg, padding: 28,
-    width: '100%', maxWidth: 420, boxShadow: T.shadow.modal,
-  },
-  title:      { fontSize: T.font.size['2xl'], fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 8 },
-  sub:        { fontSize: T.font.size.base, color: T.colors.textSub, marginBottom: 24, lineHeight: 1.5 },
-  actions:    { display: 'flex', gap: 12 },
-  btnConfirm: {
-    flex: 1, padding: 12, background: T.colors.error,
-    border: 'none', borderRadius: T.radius.pill,
-    color: T.colors.card, fontSize: T.font.size.base, fontWeight: T.font.weight.bold,
-    cursor: 'pointer', fontFamily: 'inherit',
-  },
-  btnCancel:  {
-    flex: 1, padding: 12, background: 'transparent',
-    border: '1px solid #ccc', borderRadius: T.radius.pill,
-    color: T.colors.textLight, fontSize: T.font.size.base,
-    cursor: 'pointer', fontFamily: 'inherit',
-  },
-} as const;
+import { useKumiteTheme } from '../../context/ThemeContext';
 
 interface Props {
   reg:       Registration;
@@ -36,6 +9,35 @@ interface Props {
 }
 
 export default function CancelConfirmModal({ reg, onConfirm, onClose }: Props) {
+  const T = useKumiteTheme();
+  const s = {
+    overlay:    {
+      position: 'fixed' as const, inset: 0,
+      background: 'rgba(0,0,0,0.5)', zIndex: 500,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+    },
+    modal:      {
+      background: T.colors.card, borderRadius: T.radius.lg, padding: 28,
+      width: '100%', maxWidth: 420, boxShadow: T.shadow.modal,
+    },
+    title:      { fontSize: T.font.size['2xl'], fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 8 },
+    sub:        { fontSize: T.font.size.base, color: T.colors.textSub, marginBottom: 24, lineHeight: 1.5 },
+    actions:    { display: 'flex', gap: 12 },
+    btnConfirm: {
+      flex: 1, padding: 12, background: T.colors.error,
+      border: 'none', borderRadius: T.radius.pill,
+      color: T.colors.card, fontSize: T.font.size.base, fontWeight: T.font.weight.bold,
+      cursor: 'pointer', fontFamily: 'inherit',
+    },
+    btnCancel:  {
+      flex: 1, padding: 12, background: 'transparent',
+      border: '1px solid #ccc', borderRadius: T.radius.pill,
+      color: T.colors.textLight, fontSize: T.font.size.base,
+      cursor: 'pointer', fontFamily: 'inherit',
+    },
+  } as const;
+
+
   return (
     <div style={s.overlay} onClick={onClose}>
       <div style={s.modal} onClick={(e: any) => e.stopPropagation()}>

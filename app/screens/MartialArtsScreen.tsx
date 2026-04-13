@@ -11,42 +11,44 @@ import * as DB from '../../db/database';
 import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { usePermission } from '../../hooks/usePermission';
-import { KumiteTheme as T } from '../../constants/theme';
-
-const s = {
-  page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
-  maxW:       { maxWidth: 720, margin: '0 auto' },
-  pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 6 },
-  pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
-
-  // Add / edit form card
-  formCard:   { background: T.colors.card, borderRadius: T.radius.lg, padding: 20, marginBottom: 24, boxShadow: T.shadow.card },
-  formTitle:  { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 14 },
-  formRow:    { display: 'flex', gap: 10, flexWrap: 'wrap' as const, alignItems: 'flex-end' },
-  inputWrap:  { display: 'flex', flexDirection: 'column' as const, gap: 4, flex: 1, minWidth: 120 },
-  label:      { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub },
-  input:      { padding: '9px 12px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const },
-  logoInput:  { padding: '9px 12px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: 22, fontFamily: 'inherit', outline: 'none', width: 72, textAlign: 'center' as const },
-  btnPrimary: { padding: '9px 22px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.base, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const },
-  btnGhost:   { padding: '9px 18px', background: 'transparent', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, color: T.colors.textLight, fontSize: T.font.size.base, cursor: 'pointer', fontFamily: 'inherit' },
-
-  // Martial art list
-  listTitle:  { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
-  artCard:    { background: T.colors.card, borderRadius: T.radius.lg, padding: '16px 20px', marginBottom: 10, boxShadow: T.shadow.card, display: 'flex', alignItems: 'center', gap: 14 },
-  artLogo:    { fontSize: 32, width: 44, textAlign: 'center' as const, flexShrink: 0 },
-  artName:    { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, flex: 1 },
-  btnRow:     { display: 'flex', gap: 8 },
-  editBtn:    { padding: '5px 14px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
-  deleteBtn:  { padding: '5px 14px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
-
-  // Empty / loading
-  empty:      { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
-  emptyIcon:  { fontSize: 52, display: 'block', marginBottom: 14 },
-  emptyTxt:   { fontSize: T.font.size.xl },
-  loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
-} as const;
+import { useKumiteTheme } from '../../context/ThemeContext';
 
 export default function MartialArtsScreen() {
+  const T = useKumiteTheme();
+  const s = {
+    page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
+    maxW:       { maxWidth: 720, margin: '0 auto' },
+    pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 6 },
+    pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
+  
+    // Add / edit form card
+    formCard:   { background: T.colors.card, borderRadius: T.radius.lg, padding: 20, marginBottom: 24, boxShadow: T.shadow.card },
+    formTitle:  { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 14 },
+    formRow:    { display: 'flex', gap: 10, flexWrap: 'wrap' as const, alignItems: 'flex-end' },
+    inputWrap:  { display: 'flex', flexDirection: 'column' as const, gap: 4, flex: 1, minWidth: 120 },
+    label:      { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub },
+    input:      { padding: '9px 12px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const },
+    logoInput:  { padding: '9px 12px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: 22, fontFamily: 'inherit', outline: 'none', width: 72, textAlign: 'center' as const },
+    btnPrimary: { padding: '9px 22px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.base, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const },
+    btnGhost:   { padding: '9px 18px', background: 'transparent', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, color: T.colors.textLight, fontSize: T.font.size.base, cursor: 'pointer', fontFamily: 'inherit' },
+  
+    // Martial art list
+    listTitle:  { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
+    artCard:    { background: T.colors.card, borderRadius: T.radius.lg, padding: '16px 20px', marginBottom: 10, boxShadow: T.shadow.card, display: 'flex', alignItems: 'center', gap: 14 },
+    artLogo:    { fontSize: 32, width: 44, textAlign: 'center' as const, flexShrink: 0 },
+    artName:    { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, flex: 1 },
+    btnRow:     { display: 'flex', gap: 8 },
+    editBtn:    { padding: '5px 14px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
+    deleteBtn:  { padding: '5px 14px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
+  
+    // Empty / loading
+    empty:      { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
+    emptyIcon:  { fontSize: 52, display: 'block', marginBottom: 14 },
+    emptyTxt:   { fontSize: T.font.size.xl },
+    loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
+  } as const;
+
+
   const router = useRouter();
   const { currentUser, isLoading } = useAuthGuard();
   const canManage = usePermission('manage_martial_arts');

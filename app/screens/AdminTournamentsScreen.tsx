@@ -11,7 +11,7 @@ import * as DB from '../../db/database';
 import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { usePermission } from '../../hooks/usePermission';
-import { KumiteTheme as T } from '../../constants/theme';
+import { useKumiteTheme } from '../../context/ThemeContext';
 import { STATUS_LABELS, STATUS_COLORS, LIFECYCLE_STATUSES, type TournamentStatus } from '../../constants/tournamentStatus';
 
 type TStatus = TournamentStatus;
@@ -19,55 +19,57 @@ type TStatus = TournamentStatus;
 const EMPTY_FORM = { logo: '🏆', name: '', date: '', location: '', description: '', status: 'created' as TStatus, martialArtIds: [] as string[], registrationStart: '', registrationEnd: '', templateId: '' };
 type FormState = typeof EMPTY_FORM;
 
-const s = {
-  page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
-  maxW:       { maxWidth: 860, margin: '0 auto' },
-  pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 6 },
-  pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
-
-  formCard:   { background: T.colors.card, borderRadius: T.radius.lg, padding: 20, marginBottom: 24, boxShadow: T.shadow.card },
-  formTitle:  { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 14 },
-  formGrid:   { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10, marginBottom: 12 } as any,
-  inputWrap:  { display: 'flex', flexDirection: 'column' as const, gap: 4 },
-  label:      { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub },
-  input:      { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const },
-  textarea:   { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const, resize: 'vertical' as const, minHeight: 64 },
-  logoInput:  { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: 22, fontFamily: 'inherit', outline: 'none', width: 72, textAlign: 'center' as const },
-  select:     { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', background: T.colors.card, width: '100%', boxSizing: 'border-box' as const },
-  btnPrimary: { padding: '9px 22px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.base, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const },
-  btnGhost:   { padding: '8px 16px', background: 'transparent', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, color: T.colors.textLight, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
-
-  tournCard:  { background: T.colors.card, borderRadius: T.radius.lg, padding: '16px 20px', marginBottom: 12, boxShadow: T.shadow.card },
-  cardHeader: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 },
-  tLogo:      { fontSize: 32, width: 44, textAlign: 'center' as const, flexShrink: 0 },
-  tInfo:      { flex: 1 },
-  tName:      { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark },
-  tMeta:      { fontSize: T.font.size.sm, color: T.colors.muted, marginTop: 2 },
-  tDesc:      { fontSize: T.font.size.md, color: T.colors.muted, marginBottom: 6 },
-  statusBadge:(status: TStatus) => ({
-    display: 'inline-block', padding: '2px 10px', borderRadius: T.radius.pill,
-    fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold,
-    background: STATUS_COLORS[status].bg, color: STATUS_COLORS[status].text, marginBottom: 10,
-  }),
-  btnRow:     { display: 'flex', gap: 8, flexWrap: 'wrap' as const },
-  editBtn:    { padding: '5px 14px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
-  deleteBtn:  { padding: '5px 14px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
-  openBtn:    { padding: '5px 14px', background: '#e8f5e9', border: '1px solid #66bb6a', borderRadius: T.radius.xl, color: '#2e7d32', fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
-  closeBtn:   { padding: '5px 14px', background: '#fce8e6', border: '1px solid #ef9a9a', borderRadius: T.radius.xl, color: '#b3261e', fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
-  regStatus:  (open: boolean) => ({ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: open ? '#2e7d32' : '#b3261e', marginBottom: 8 }),
-
-  artBadges:  { display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 8 },
-  artBadge:   { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: T.colors.borderLight, borderRadius: T.radius.pill, fontSize: T.font.size.sm, color: T.colors.textSub },
-  checkRow:   { display: 'flex', flexWrap: 'wrap' as const, gap: 10, marginTop: 4 },
-  checkLabel: { display: 'flex', alignItems: 'center', gap: 6, fontSize: T.font.size.base, color: T.colors.text, cursor: 'pointer' },
-  listTitle:  { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
-  empty:      { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
-  emptyIcon:  { fontSize: 52, display: 'block', marginBottom: 14 },
-  emptyTxt:   { fontSize: T.font.size.xl },
-  loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
-} as const;
-
 export default function AdminTournamentsScreen() {
+  const T = useKumiteTheme();
+  const s = {
+    page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
+    maxW:       { maxWidth: 860, margin: '0 auto' },
+    pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 6 },
+    pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 28 },
+  
+    formCard:   { background: T.colors.card, borderRadius: T.radius.lg, padding: 20, marginBottom: 24, boxShadow: T.shadow.card },
+    formTitle:  { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 14 },
+    formGrid:   { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10, marginBottom: 12 } as any,
+    inputWrap:  { display: 'flex', flexDirection: 'column' as const, gap: 4 },
+    label:      { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub },
+    input:      { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const },
+    textarea:   { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const, resize: 'vertical' as const, minHeight: 64 },
+    logoInput:  { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: 22, fontFamily: 'inherit', outline: 'none', width: 72, textAlign: 'center' as const },
+    select:     { padding: '8px 10px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', background: T.colors.card, width: '100%', boxSizing: 'border-box' as const },
+    btnPrimary: { padding: '9px 22px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.base, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const },
+    btnGhost:   { padding: '8px 16px', background: 'transparent', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, color: T.colors.textLight, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
+  
+    tournCard:  { background: T.colors.card, borderRadius: T.radius.lg, padding: '16px 20px', marginBottom: 12, boxShadow: T.shadow.card },
+    cardHeader: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 },
+    tLogo:      { fontSize: 32, width: 44, textAlign: 'center' as const, flexShrink: 0 },
+    tInfo:      { flex: 1 },
+    tName:      { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark },
+    tMeta:      { fontSize: T.font.size.sm, color: T.colors.muted, marginTop: 2 },
+    tDesc:      { fontSize: T.font.size.md, color: T.colors.muted, marginBottom: 6 },
+    statusBadge:(status: TStatus) => ({
+      display: 'inline-block', padding: '2px 10px', borderRadius: T.radius.pill,
+      fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold,
+      background: STATUS_COLORS[status].bg, color: STATUS_COLORS[status].text, marginBottom: 10,
+    }),
+    btnRow:     { display: 'flex', gap: 8, flexWrap: 'wrap' as const },
+    editBtn:    { padding: '5px 14px', background: T.colors.primaryLight, border: `1px solid ${T.colors.primary}`, borderRadius: T.radius.xl, color: T.colors.primary, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
+    deleteBtn:  { padding: '5px 14px', background: 'transparent', border: `1px solid ${T.colors.error}`, borderRadius: T.radius.xl, color: T.colors.error, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
+    openBtn:    { padding: '5px 14px', background: '#e8f5e9', border: '1px solid #66bb6a', borderRadius: T.radius.xl, color: '#2e7d32', fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
+    closeBtn:   { padding: '5px 14px', background: '#fce8e6', border: '1px solid #ef9a9a', borderRadius: T.radius.xl, color: '#b3261e', fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
+    regStatus:  (open: boolean) => ({ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: open ? '#2e7d32' : '#b3261e', marginBottom: 8 }),
+  
+    artBadges:  { display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 8 },
+    artBadge:   { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: T.colors.borderLight, borderRadius: T.radius.pill, fontSize: T.font.size.sm, color: T.colors.textSub },
+    checkRow:   { display: 'flex', flexWrap: 'wrap' as const, gap: 10, marginTop: 4 },
+    checkLabel: { display: 'flex', alignItems: 'center', gap: 6, fontSize: T.font.size.base, color: T.colors.text, cursor: 'pointer' },
+    listTitle:  { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
+    empty:      { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
+    emptyIcon:  { fontSize: 52, display: 'block', marginBottom: 14 },
+    emptyTxt:   { fontSize: T.font.size.xl },
+    loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
+  } as const;
+
+
   const router = useRouter();
   const { currentUser, isLoading } = useAuthGuard();
   const canManage = usePermission('manage_tournaments');

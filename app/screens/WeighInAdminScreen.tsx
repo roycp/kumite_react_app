@@ -13,7 +13,7 @@ import Sidebar from '../../components/Sidebar';
 import { BracketParticipantCard } from '../../components/BracketParticipantCard';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { usePermission } from '../../hooks/usePermission';
-import { KumiteTheme as T } from '../../constants/theme';
+import { useKumiteTheme } from '../../context/ThemeContext';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -41,44 +41,46 @@ function matchesSearch(entry: AthleteEntry, q: string): boolean {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-const s = {
-  page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
-  maxW:       { maxWidth: 860, margin: '0 auto' },
-  backBtn:    { background: 'none', border: 'none', color: T.colors.primary, fontSize: T.font.size.base, cursor: 'pointer', marginBottom: 20, padding: 0, fontFamily: 'inherit' },
-  pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 4 },
-  pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 24 },
-
-  searchWrap: { position: 'relative' as const, marginBottom: 20 },
-  searchIcon: { position: 'absolute' as const, left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16, pointerEvents: 'none' as const },
-  searchInput:{ width: '100%', height: 44, border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, paddingLeft: 40, paddingRight: 14, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', background: T.colors.card, boxSizing: 'border-box' as const },
-
-  row:        { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: T.colors.card, borderRadius: T.radius.md, marginBottom: 8, boxShadow: T.shadow.card },
-  divBadge:   { display: 'inline-block', padding: '2px 8px', borderRadius: T.radius.pill, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, background: T.colors.primaryLight, color: T.colors.primary, whiteSpace: 'nowrap' as const, flexShrink: 0 },
-  recordBtn:  { padding: '6px 14px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap' as const },
-
-  meetsBadge: { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: T.radius.pill, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: '#2e7d32', flexShrink: 0, whiteSpace: 'nowrap' as const },
-  lostBadge:  { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#fce8e6', border: '1px solid #f4b8b5', borderRadius: T.radius.pill, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: '#b3261e', flexShrink: 0, whiteSpace: 'nowrap' as const },
-
-  // Modal overlay
-  overlay:    { position: 'fixed' as const, inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 },
-  modal:      { background: T.colors.card, borderRadius: T.radius.lg, padding: '28px 32px', width: '100%', maxWidth: 420, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' },
-  modalTitle: { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 16 },
-  infoRow:    { display: 'flex', gap: 8, fontSize: T.font.size.base, color: T.colors.text, marginBottom: 8 },
-  infoLabel:  { fontWeight: T.font.weight.semibold, color: T.colors.textSub, minWidth: 130 },
-  label:      { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub, marginBottom: 4, marginTop: 16 },
-  input:      { padding: '9px 12px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const },
-  btnRow:     { display: 'flex', gap: 8, marginTop: 20 },
-  btnPrimary: { padding: '9px 22px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.base, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
-  btnGhost:   { padding: '8px 16px', background: 'transparent', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, color: T.colors.textLight, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
-
-  empty:      { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
-  locked:     { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.error, background: '#fff5f5', borderRadius: T.radius.lg, boxShadow: T.shadow.card, border: `1px solid ${T.colors.error}` },
-  loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
-} as const;
-
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function WeighInAdminScreen() {
+  const T = useKumiteTheme();
+  const s = {
+    page:       { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
+    maxW:       { maxWidth: 860, margin: '0 auto' },
+    backBtn:    { background: 'none', border: 'none', color: T.colors.primary, fontSize: T.font.size.base, cursor: 'pointer', marginBottom: 20, padding: 0, fontFamily: 'inherit' },
+    pageTitle:  { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 4 },
+    pageSub:    { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 24 },
+  
+    searchWrap: { position: 'relative' as const, marginBottom: 20 },
+    searchIcon: { position: 'absolute' as const, left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16, pointerEvents: 'none' as const },
+    searchInput:{ width: '100%', height: 44, border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, paddingLeft: 40, paddingRight: 14, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', background: T.colors.card, boxSizing: 'border-box' as const },
+  
+    row:        { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: T.colors.card, borderRadius: T.radius.md, marginBottom: 8, boxShadow: T.shadow.card },
+    divBadge:   { display: 'inline-block', padding: '2px 8px', borderRadius: T.radius.pill, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, background: T.colors.primaryLight, color: T.colors.primary, whiteSpace: 'nowrap' as const, flexShrink: 0 },
+    recordBtn:  { padding: '6px 14px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap' as const },
+  
+    meetsBadge: { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: T.radius.pill, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: '#2e7d32', flexShrink: 0, whiteSpace: 'nowrap' as const },
+    lostBadge:  { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#fce8e6', border: '1px solid #f4b8b5', borderRadius: T.radius.pill, fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: '#b3261e', flexShrink: 0, whiteSpace: 'nowrap' as const },
+  
+    // Modal overlay
+    overlay:    { position: 'fixed' as const, inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 },
+    modal:      { background: T.colors.card, borderRadius: T.radius.lg, padding: '28px 32px', width: '100%', maxWidth: 420, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' },
+    modalTitle: { fontSize: T.font.size.xl, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 16 },
+    infoRow:    { display: 'flex', gap: 8, fontSize: T.font.size.base, color: T.colors.text, marginBottom: 8 },
+    infoLabel:  { fontWeight: T.font.weight.semibold, color: T.colors.textSub, minWidth: 130 },
+    label:      { fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold, color: T.colors.textSub, marginBottom: 4, marginTop: 16 },
+    input:      { padding: '9px 12px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.sm, fontSize: T.font.size.base, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const },
+    btnRow:     { display: 'flex', gap: 8, marginTop: 20 },
+    btnPrimary: { padding: '9px 22px', background: T.colors.primary, border: 'none', borderRadius: T.radius.xl, color: T.colors.card, fontSize: T.font.size.base, fontWeight: T.font.weight.semibold, cursor: 'pointer', fontFamily: 'inherit' },
+    btnGhost:   { padding: '8px 16px', background: 'transparent', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl, color: T.colors.textLight, fontSize: T.font.size.sm, cursor: 'pointer', fontFamily: 'inherit' },
+  
+    empty:      { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.muted, background: T.colors.card, borderRadius: T.radius.lg, boxShadow: T.shadow.card },
+    locked:     { textAlign: 'center' as const, padding: '48px 24px', color: T.colors.error, background: '#fff5f5', borderRadius: T.radius.lg, boxShadow: T.shadow.card, border: `1px solid ${T.colors.error}` },
+    loading:    { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
+  } as const;
+
+
   const router    = useRouter();
   const { currentUser, isLoading } = useAuthGuard();
   const canManage = usePermission('manage_tournaments');

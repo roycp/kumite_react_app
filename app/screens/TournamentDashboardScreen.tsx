@@ -12,65 +12,67 @@ import * as DB from '../../db/database';
 import Sidebar from '../../components/Sidebar';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { usePermission } from '../../hooks/usePermission';
-import { KumiteTheme as T } from '../../constants/theme';
+import { useKumiteTheme } from '../../context/ThemeContext';
 import { STATUS_LABELS, STATUS_COLORS, LIFECYCLE_STATUSES, type TournamentStatus } from '../../constants/tournamentStatus';
 
 type TStatus = TournamentStatus;
 
-const s = {
-  page:        { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
-  maxW:        { maxWidth: 860, margin: '0 auto' },
-  backBtn:     { background: 'none', border: 'none', color: T.colors.primary, fontSize: T.font.size.base, cursor: 'pointer', marginBottom: 20, padding: 0, fontFamily: 'inherit' },
-  pageTitle:   { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 4 },
-  pageSub:     { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 24 },
-
-  infoCard:    { background: T.colors.card, borderRadius: T.radius.lg, padding: '20px 24px', marginBottom: 20, boxShadow: T.shadow.card },
-  infoTitle:   { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
-  infoRow:     { display: 'flex', gap: 8, alignItems: 'center', fontSize: T.font.size.base, color: T.colors.text, marginBottom: 6 },
-  infoLabel:   { fontWeight: T.font.weight.semibold, color: T.colors.textSub, minWidth: 120 },
-
-  statusBadge: (status: TStatus) => ({
-    display: 'inline-block', padding: '3px 12px', borderRadius: T.radius.pill,
-    fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold,
-    background: STATUS_COLORS[status].bg, color: STATUS_COLORS[status].text,
-  }),
-
-  statusCard:  { background: T.colors.card, borderRadius: T.radius.lg, padding: '20px 24px', marginBottom: 20, boxShadow: T.shadow.card },
-  btnRow:      { display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginTop: 12 },
-  statusBtn:   (active: boolean) => ({
-    padding: '7px 18px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl,
-    cursor: 'pointer', fontFamily: 'inherit', fontSize: T.font.size.sm,
-    background: active ? T.colors.primary : T.colors.card,
-    color: active ? T.colors.card : T.colors.textSub,
-    fontWeight: active ? T.font.weight.bold : T.font.weight.normal,
-  }),
-
-  lifecycleCard: { background: T.colors.card, borderRadius: T.radius.lg, padding: '20px 24px', marginBottom: 20, boxShadow: T.shadow.card },
-  lcBtnRow:    { display: 'flex', gap: 12, flexWrap: 'wrap' as const, marginTop: 12 },
-  startBtn:    { padding: '9px 22px', border: 'none', borderRadius: T.radius.xl, cursor: 'pointer', fontFamily: 'inherit', fontSize: T.font.size.base, background: T.colors.success, color: '#fff', fontWeight: T.font.weight.bold },
-  endBtn:      (enabled: boolean) => ({
-    padding: '9px 22px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl,
-    cursor: enabled ? 'pointer' : 'not-allowed', fontFamily: 'inherit', fontSize: T.font.size.base,
-    background: enabled ? T.colors.error : T.colors.borderLight,
-    color: enabled ? '#fff' : T.colors.mutedLight,
-    fontWeight: T.font.weight.bold,
-    opacity: enabled ? 1 : 0.5,
-  }),
-
-  regCard:     { background: T.colors.card, borderRadius: T.radius.lg, padding: '20px 24px', marginBottom: 20, boxShadow: T.shadow.card },
-  regTitle:    { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
-  discipline:  { marginBottom: 16 },
-  discName:    { fontSize: T.font.size.md, fontWeight: T.font.weight.bold, color: T.colors.primary, marginBottom: 8 },
-  discCount:   { fontSize: T.font.size.sm, color: T.colors.muted, marginLeft: 8 },
-  athlete:     { display: 'flex', gap: 12, alignItems: 'flex-start', padding: '8px 0', borderBottom: `1px solid ${T.colors.border}`, fontSize: T.font.size.base },
-  athleteName: { fontWeight: T.font.weight.semibold, color: T.colors.dark, minWidth: 140 },
-  athleteMeta: { color: T.colors.muted, fontSize: T.font.size.sm },
-
-  empty:       { textAlign: 'center' as const, padding: '32px 24px', color: T.colors.muted },
-  loading:     { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
-} as const;
-
 export default function TournamentDashboardScreen() {
+  const T = useKumiteTheme();
+  const s = {
+    page:        { minHeight: '100%', background: T.colors.background, padding: '32px 24px', fontFamily: T.font.family, boxSizing: 'border-box' as const },
+    maxW:        { maxWidth: 860, margin: '0 auto' },
+    backBtn:     { background: 'none', border: 'none', color: T.colors.primary, fontSize: T.font.size.base, cursor: 'pointer', marginBottom: 20, padding: 0, fontFamily: 'inherit' },
+    pageTitle:   { fontSize: T.font.size['4xl'], fontWeight: T.font.weight.extrabold, color: T.colors.dark, marginBottom: 4 },
+    pageSub:     { fontSize: T.font.size.base, color: T.colors.muted, marginBottom: 24 },
+  
+    infoCard:    { background: T.colors.card, borderRadius: T.radius.lg, padding: '20px 24px', marginBottom: 20, boxShadow: T.shadow.card },
+    infoTitle:   { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
+    infoRow:     { display: 'flex', gap: 8, alignItems: 'center', fontSize: T.font.size.base, color: T.colors.text, marginBottom: 6 },
+    infoLabel:   { fontWeight: T.font.weight.semibold, color: T.colors.textSub, minWidth: 120 },
+  
+    statusBadge: (status: TStatus) => ({
+      display: 'inline-block', padding: '3px 12px', borderRadius: T.radius.pill,
+      fontSize: T.font.size.sm, fontWeight: T.font.weight.semibold,
+      background: STATUS_COLORS[status].bg, color: STATUS_COLORS[status].text,
+    }),
+  
+    statusCard:  { background: T.colors.card, borderRadius: T.radius.lg, padding: '20px 24px', marginBottom: 20, boxShadow: T.shadow.card },
+    btnRow:      { display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginTop: 12 },
+    statusBtn:   (active: boolean) => ({
+      padding: '7px 18px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl,
+      cursor: 'pointer', fontFamily: 'inherit', fontSize: T.font.size.sm,
+      background: active ? T.colors.primary : T.colors.card,
+      color: active ? T.colors.card : T.colors.textSub,
+      fontWeight: active ? T.font.weight.bold : T.font.weight.normal,
+    }),
+  
+    lifecycleCard: { background: T.colors.card, borderRadius: T.radius.lg, padding: '20px 24px', marginBottom: 20, boxShadow: T.shadow.card },
+    lcBtnRow:    { display: 'flex', gap: 12, flexWrap: 'wrap' as const, marginTop: 12 },
+    startBtn:    { padding: '9px 22px', border: 'none', borderRadius: T.radius.xl, cursor: 'pointer', fontFamily: 'inherit', fontSize: T.font.size.base, background: T.colors.success, color: '#fff', fontWeight: T.font.weight.bold },
+    endBtn:      (enabled: boolean) => ({
+      padding: '9px 22px', border: `1px solid ${T.colors.border}`, borderRadius: T.radius.xl,
+      cursor: enabled ? 'pointer' : 'not-allowed', fontFamily: 'inherit', fontSize: T.font.size.base,
+      background: enabled ? T.colors.error : T.colors.borderLight,
+      color: enabled ? '#fff' : T.colors.mutedLight,
+      fontWeight: T.font.weight.bold,
+      opacity: enabled ? 1 : 0.5,
+    }),
+  
+    regCard:     { background: T.colors.card, borderRadius: T.radius.lg, padding: '20px 24px', marginBottom: 20, boxShadow: T.shadow.card },
+    regTitle:    { fontSize: T.font.size.lg, fontWeight: T.font.weight.bold, color: T.colors.dark, marginBottom: 12 },
+    discipline:  { marginBottom: 16 },
+    discName:    { fontSize: T.font.size.md, fontWeight: T.font.weight.bold, color: T.colors.primary, marginBottom: 8 },
+    discCount:   { fontSize: T.font.size.sm, color: T.colors.muted, marginLeft: 8 },
+    athlete:     { display: 'flex', gap: 12, alignItems: 'flex-start', padding: '8px 0', borderBottom: `1px solid ${T.colors.border}`, fontSize: T.font.size.base },
+    athleteName: { fontWeight: T.font.weight.semibold, color: T.colors.dark, minWidth: 140 },
+    athleteMeta: { color: T.colors.muted, fontSize: T.font.size.sm },
+  
+    empty:       { textAlign: 'center' as const, padding: '32px 24px', color: T.colors.muted },
+    loading:     { textAlign: 'center' as const, padding: 32, color: T.colors.mutedLight },
+  } as const;
+
+
   const router  = useRouter();
   const { currentUser, isLoading } = useAuthGuard();
   const canManage = usePermission('manage_tournaments');
