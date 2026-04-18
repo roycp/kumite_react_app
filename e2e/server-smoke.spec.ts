@@ -136,14 +136,12 @@ test('GET /api/users returns user list with valid token', async ({ request }) =>
 
 // ── Data shape ─────────────────────────────────────────────────────────────────
 
-test('registered user response has id (not _id)', async ({ request }) => {
+test('registered user response has id not _id', async ({ request }) => {
   const email = `smoke-id-${Date.now()}@kumite.test`;
   const res = await request.post(`${SERVER}/api/auth/register`, {
     data: { email, password: 'Id@1234', fullName: 'ID Shape Test' },
   });
   const body = await res.json();
-  // Server should return id, not _id (normalization check)
-  // Note: server currently returns _id from Mongoose — ticket 01 adds normalization.
-  // This assertion documents the expected post-migration shape.
-  expect(body.user).toHaveProperty('_id'); // current shape (pre-normalization)
+  expect(body.user).toHaveProperty('id');
+  expect(body.user).not.toHaveProperty('_id');
 });

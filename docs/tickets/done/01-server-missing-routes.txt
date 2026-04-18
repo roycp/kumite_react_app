@@ -1,0 +1,204 @@
+Priority: 1
+Description: Add missing server-side Mongoose models, routes, and query-param filtering so the app has a complete REST API to migrate to.
+Resolved: (yes)
+State: (done)
+Criteria of success:
+  - Server exposes full CRUD for: coach-assignments, tournament-templates, user-martial-art-ranks, bracket-seeds, weigh-in-results
+  - Existing routes support query-param filtering where the app needs it
+  - All responses normalize MongoDB _id → id so the client never sees _id
+  - Server returns 200/201/204 for all happy paths; 400/404/500 on errors
+  - No existing routes broken
+Plan generated: (yes)
+Playwright test created: (yes) — e2e/server-new-routes.spec.ts
+Playwright test is passing: (yes) — 12/12 passed
+Unit test created: (no)
+
+────────────────────────────────────────────────────────────────
+## Context
+
+The Node.js server (server/src/) already has models + routes for:
+  users, registrations, tournaments, martial-arts, organizations,
+  rank-systems, role-definitions
+
+The app's database.web.ts also needs endpoints for five more collections
+that currently have NO server equivalent. All five must be created.
+Additionally, several existing routes return full collections with no
+filtering, but the app queries by a related field (e.g., userId). Those
+routes need to gain optional query-param filters.
+
+────────────────────────────────────────────────────────────────
+## Execution Plan
+
+### A. Shared helper — normalize _id → id
+
+In server/src/utils/normalize.ts (new file):
+
+  export function normalizeId(doc: any): any {
+    if (!doc) return doc;
+    const { _id, __v, ...rest } = doc;
+    return { id: String(_id), ...rest };
+  }
+
+  export function normalizeIds(docs: any[]): any[] {
+    return docs.map(normalizeId);
+  }
+
+Apply normalizeId/normalizeIds in every route's responses (both new and
+existing). Each router.get('/'), router.get('/:id'), router.post('/'),
+router.patch('/:id') should wrap its lean() result through normalizeId.
+
+────────────────────────────────────────────────────────────────
+### B. New Mongoose Models
+
+#### server/src/models/CoachAssignment.ts
+  {
+    coachId:   { type: String, required: true },
+    athleteId: { type: String, required: true },
+    synced:    { type: Boolean, default: false },
+    createdAt: { type: Date,   default: Date.now },
+  }
+  Index: { coachId: 1, athleteId: 1 } unique: true (prevent duplicates)
+
+#### server/src/models/TournamentTemplate.ts
+  {
+    name:         { type: String, required: true },
+    description:  { type: String, default: '' },
+    modalities:   [String],
+    weightClasses: [{
+      id:     String,
+      label:  String,
+      minKg:  Number,   // nullable — use null
+      maxKg:  Number,
+    }],
+    categories: [{
+      id:         String,
+      name:       String,
+      discipline: String,
+      gender:     String,
+      ageGroup:   String,
+      rankRange:  String,
+    }],
+    synced:    { type: Boolean, default: false },
+    createdAt: { type: Date,   default: Date.now },
+  }
+
+#### server/src/models/UserMartialArtRank.ts
+  {
+    userId:       { type: String, required: true },
+    martialArtId: { type: String, required: true },
+    rankSystemId: { type: String, required: true },
+    synced:       { type: Boolean, default: false },
+    createdAt:    { type: Date,   default: Date.now },
+  }
+  Index: { userId: 1, martialArtId: 1 } unique: true
+
+#### server/src/models/BracketSeed.ts
+  {
+    tournamentId: { type: String, required: true, unique: true },
+    seeds:        { type: Map, of: [String] },  // Record<string, string[]>
+    updatedAt:    { type: Date, default: Date.now },
+  }
+
+#### server/src/models/WeighInResult.ts
+  {
+    tournamentId:   { type: String, required: true },
+    registrationId: { type: String, required: true },
+    athleteName:    { type: String, required: true },
+    discipline:     { type: String, required: true },
+    weightDivision: { type: String, default: null },
+    actualWeightKg: { type: Number, required: true },
+    status:         { type: String, enum: ['meets_weight', 'lost_weight'], required: true },
+    synced:         { type: Boolean, default: false },
+    timestamp:      { type: Date, default: Date.now },
+  }
+
+────────────────────────────────────────────────────────────────
+### C. New Route Files
+
+#### server/src/routes/coachAssignments.ts
+  GET    /api/coach-assignments            → list all (supports ?coachId=, ?athleteId=)
+  GET    /api/coach-assignments/:id        → get one
+  POST   /api/coach-assignments            → create { coachId, athleteId }
+                                             Return 409 if duplicate
+  DELETE /api/coach-assignments/:id        → delete
+
+#### server/src/routes/tournamentTemplates.ts
+  GET    /api/tournament-templates         → list all
+  GET    /api/tournament-templates/:id     → get one
+  POST   /api/tournament-templates         → create
+  PATCH  /api/tournament-templates/:id     → update
+  DELETE /api/tournament-templates/:id     → delete
+
+#### server/src/routes/userMartialArtRanks.ts
+  GET    /api/user-martial-art-ranks       → list all (supports ?userId=, ?martialArtId=)
+  GET    /api/user-martial-art-ranks/:id   → get one
+  POST   /api/user-martial-art-ranks       → upsert (findOneAndUpdate with upsert:true)
+                                             Body: { userId, martialArtId, rankSystemId }
+  DELETE /api/user-martial-art-ranks/:id   → delete
+
+#### server/src/routes/bracketSeeds.ts
+  GET    /api/bracket-seeds/:tournamentId  → get seeds for tournament (returns {} if none)
+  PUT    /api/bracket-seeds/:tournamentId  → upsert seeds for tournament
+                                             Body: { seeds: Record<string, string[]> }
+
+#### server/src/routes/weighInResults.ts
+  GET    /api/weigh-in-results             → list all (supports ?tournamentId=, ?registrationId=)
+  GET    /api/weigh-in-results/:id         → get one
+  POST   /api/weigh-in-results            → create
+  PATCH  /api/weigh-in-results/:id         → update
+
+────────────────────────────────────────────────────────────────
+### D. Update Existing Routes to Support Query Filtering
+
+These routes currently return all records. Add optional query-param
+filtering so the client can fetch only what it needs:
+
+server/src/routes/registrations.ts — GET /
+  Add: if (req.query.userId) filter.userId = req.query.userId
+  Add: if (req.query.tournamentId) filter.tournamentId = req.query.tournamentId
+
+server/src/routes/rankSystems.ts — GET /
+  Add: if (req.query.martialArtId) filter.martialArtId = req.query.martialArtId
+
+server/src/app.ts — GET /api/users (already protected by requireAuth)
+  Add: if (req.query.email) filter.email = (req.query.email as string).toLowerCase()
+  Add: if (req.query.role) filter.role = req.query.role
+  (This lets the app fetch athletes via ?role=athlete and look up by email)
+
+────────────────────────────────────────────────────────────────
+### E. Register New Routes in app.ts
+
+  import coachAssignmentsRouter    from './routes/coachAssignments';
+  import tournamentTemplatesRouter  from './routes/tournamentTemplates';
+  import userMartialArtRanksRouter  from './routes/userMartialArtRanks';
+  import bracketSeedsRouter         from './routes/bracketSeeds';
+  import weighInResultsRouter       from './routes/weighInResults';
+
+  app.use('/api/coach-assignments',      coachAssignmentsRouter);
+  app.use('/api/tournament-templates',   tournamentTemplatesRouter);
+  app.use('/api/user-martial-art-ranks', userMartialArtRanksRouter);
+  app.use('/api/bracket-seeds',          bracketSeedsRouter);
+  app.use('/api/weigh-in-results',       weighInResultsRouter);
+
+────────────────────────────────────────────────────────────────
+## Comments
+- BracketSeeds uses PUT (not POST) because it's a pure upsert by tournamentId.
+- UserMartialArtRanks POST is also an upsert — use findOneAndUpdate with
+  { upsert: true, new: true } on { userId, martialArtId } filter.
+- seeds field on BracketSeed: Mongoose Map type serializes to a plain
+  object in .lean() — verify this in tests, may need JSON.stringify/parse.
+- All new routes should be unprotected (no requireAuth) for now, consistent
+  with most existing routes. Add auth later if needed.
+- TypeScript: add proper req.query types or cast with (req.query.x as string).
+
+## Review Notes
+- Created server/src/utils/normalize.ts with normalizeId/normalizeIds helpers applied to all routes.
+- Added 5 new Mongoose models: CoachAssignment, TournamentTemplate, UserMartialArtRank, BracketSeed, WeighInResult.
+- Added 5 new route files wired into app.ts.
+- Updated existing routes (registrations, rankSystems, martialArts, organizations, tournaments, roleDefinitions, auth) to use normalizeId.
+- Added query-param filtering: registrations (?userId,?tournamentId), rankSystems (?martialArtId), users (?email,?role).
+- UserMartialArtRank POST is an upsert (findOneAndUpdate with upsert:true).
+- BracketSeed seeds field uses Mongoose Map; serialized to plain object in GET response.
+- CoachAssignment unique index on {coachId,athleteId} — duplicate POST returns 409.
+- server-smoke.spec.ts updated: _id assertion changed to expect id (not _id).
+- 12/12 new-routes tests pass, server-smoke.spec.ts still passes (both run clean).

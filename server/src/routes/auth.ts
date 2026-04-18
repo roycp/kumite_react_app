@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { User } from '../models/User';
 import { signToken } from '../middleware/auth';
+import { normalizeId } from '../utils/normalize';
 
 const router = Router();
 const SALT_ROUNDS = 12;
@@ -39,7 +40,7 @@ router.post('/register', async (req, res) => {
 
   const token = signToken(String(user._id), user.role);
   const { passwordHash: _ph, ...safeUser } = user.toObject();
-  res.status(201).json({ token, user: safeUser });
+  res.status(201).json({ token, user: normalizeId(safeUser) });
 });
 
 /**
@@ -66,7 +67,7 @@ router.post('/login', async (req, res) => {
 
   const token = signToken(String(user._id), user.role);
   const { passwordHash: _ph, ...safeUser } = user.toObject();
-  res.json({ token, user: safeUser });
+  res.json({ token, user: normalizeId(safeUser) });
 });
 
 export default router;

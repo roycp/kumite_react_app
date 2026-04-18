@@ -1,26 +1,26 @@
 import { Router } from 'express';
-import { Registration } from '../models/Registration';
+import { WeighInResult } from '../models/WeighInResult';
 import { normalizeId, normalizeIds } from '../utils/normalize';
 
 const router = Router();
 
 router.get('/', async (req, res) => {
   const filter: Record<string, string> = {};
-  if (req.query.userId)       filter.userId       = req.query.userId as string;
-  if (req.query.tournamentId) filter.tournamentId = req.query.tournamentId as string;
-  const items = await Registration.find(filter).lean();
+  if (req.query.tournamentId)   filter.tournamentId   = req.query.tournamentId as string;
+  if (req.query.registrationId) filter.registrationId = req.query.registrationId as string;
+  const items = await WeighInResult.find(filter).lean();
   res.json(normalizeIds(items));
 });
 
 router.get('/:id', async (req, res) => {
-  const item = await Registration.findById(req.params.id).lean();
+  const item = await WeighInResult.findById(req.params.id).lean();
   if (!item) return res.status(404).json({ error: 'Not found' });
   res.json(normalizeId(item));
 });
 
 router.post('/', async (req, res) => {
   try {
-    const item = await Registration.create(req.body);
+    const item = await WeighInResult.create(req.body);
     res.status(201).json(normalizeId(item.toObject()));
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -28,15 +28,11 @@ router.post('/', async (req, res) => {
 });
 
 router.patch('/:id', async (req, res) => {
-  const item = await Registration.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true }).lean();
+  const item = await WeighInResult.findByIdAndUpdate(
+    req.params.id, req.body, { new: true, runValidators: true },
+  ).lean();
   if (!item) return res.status(404).json({ error: 'Not found' });
   res.json(normalizeId(item));
-});
-
-router.delete('/:id', async (req, res) => {
-  const item = await Registration.findByIdAndDelete(req.params.id);
-  if (!item) return res.status(404).json({ error: 'Not found' });
-  res.status(204).send();
 });
 
 export default router;
