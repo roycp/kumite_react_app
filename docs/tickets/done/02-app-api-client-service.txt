@@ -1,0 +1,167 @@
+Priority: 2
+Description: Create a central API client service in the app that handles all HTTP communication with the Node.js server, including JWT token storage and automatic auth header injection.
+Resolved: (yes)
+State: (done)
+Depends on: 01-server-missing-routes.txt
+Criteria of success:
+  - services/api.ts exports typed helpers: apiGet, apiPost, apiPatch, apiDelete
+  - JWT token is persisted in AsyncStorage under 'session:jwt'
+  - All requests automatically attach Authorization: Bearer <token> if a token is stored
+  - Non-2xx responses throw a structured ApiError with status code and message
+  - BASE_URL is read from a single config constant (easy to change for prod)
+  - _id is normalized to id in every server response automatically
+  - The service is purely a utility — no React state, no context dependency
+Plan generated: (yes)
+Playwright test created: (yes) — e2e/api-client-service.spec.ts
+Playwright test is passing: (yes) — 8/8 passed
+Unit test created: (no)
+
+────────────────────────────────────────────────────────────────
+## Context
+
+Currently all data lives in AsyncStorage. We are migrating every
+database.web.ts function to call the server. Before rewriting those
+functions we need a clean, reusable HTTP client so:
+  1. Every server call goes through one place (easy to swap base URL)
+  2. JWT token management is centralized (store, load, clear)
+  3. _id → id mapping happens once (not in every caller)
+  4. Error handling is consistent
+
+This service has NO dependency on React or context — it is plain
+async TypeScript that database.web.ts and AuthContext can both import.
+
+────────────────────────────────────────────────────────────────
+## Execution Plan
+
+### A. Config constant
+
+In constants/serverConfig.ts (new file):
+
+  // Change this to your LAN IP when testing on a physical device.
+  // For the Expo web dev build, localhost works fine.
+  export const SERVER_BASE_URL = 'http://localhost:3000';
+
+────────────────────────────────────────────────────────────────
+### B. Create services/api.ts (new file)
+
+```typescript
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SERVER_BASE_URL } from '../constants/serverConfig';
+
+const TOKEN_KEY = 'session:jwt';
+
+// ── Token helpers ──────────────────────────────────────────────
+
+export async function storeToken(token: string): Promise<void> {
+  await AsyncStorage.setItem(TOKEN_KEY, token);
+}
+
+export async function loadToken(): Promise<string | null> {
+  return AsyncStorage.getItem(TOKEN_KEY);
+}
+
+export async function clearToken(): Promise<void> {
+  await AsyncStorage.removeItem(TOKEN_KEY);
+}
+
+// ── Error type ─────────────────────────────────────────────────
+
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+// ── _id normalizer ─────────────────────────────────────────────
+// MongoDB returns _id; our local types use id.
+
+function normalizeDoc(doc: any): any {
+  if (!doc || typeof doc !== 'object') return doc;
+  if (Array.isArray(doc)) return doc.map(normalizeDoc);
+  const { _id, __v, ...rest } = doc;
+  return _id !== undefined ? { id: String(_id), ...rest } : rest;
+}
+
+// ── Core fetch ─────────────────────────────────────────────────
+
+async function apiFetch<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const token = await loadToken();
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> ?? {}),
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${SERVER_BASE_URL}${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (res.status === 204) return undefined as unknown as T;
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new ApiError(res.status, json?.error ?? res.statusText);
+  }
+
+  return normalizeDoc(json) as T;
+}
+
+// ── Public helpers ─────────────────────────────────────────────
+
+export function apiGet<T>(path: string): Promise<T> {
+  return apiFetch<T>(path);
+}
+
+export function apiPost<T>(path: string, body: unknown): Promise<T> {
+  return apiFetch<T>(path, { method: 'POST', body: JSON.stringify(body) });
+}
+
+export function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  return apiFetch<T>(path, { method: 'PATCH', body: JSON.stringify(body) });
+}
+
+export function apiPut<T>(path: string, body: unknown): Promise<T> {
+  return apiFetch<T>(path, { method: 'PUT', body: JSON.stringify(body) });
+}
+
+export function apiDelete(path: string): Promise<void> {
+  return apiFetch<void>(path, { method: 'DELETE' });
+}
+```
+
+────────────────────────────────────────────────────────────────
+### C. Folder structure after this ticket
+
+  services/
+    api.ts          ← new: HTTP client with token management
+  constants/
+    serverConfig.ts ← new: BASE_URL config
+
+────────────────────────────────────────────────────────────────
+## Comments
+- Keep the old KEYS object and AsyncStorage session key ('db:session_user_id')
+  untouched in database.web.ts until ticket 03 migrates AuthContext —
+  we do not want to break auth while the API client is being set up.
+- normalizeDoc handles both single objects and arrays, so apiGet<T[]>
+  returns correctly typed arrays with id instead of _id.
+- ApiError gives callers a typed status code — useful for 401 handling
+  (e.g., auto-logout when token expires, to be added later).
+- fetch is available in React Native and Expo web — no polyfill needed.
+- Do not use axios — keep the dependency footprint small.
+
+## Review Notes
+- services/api.ts created with storeToken/loadToken/clearToken (AsyncStorage, key 'session:jwt'),
+  ApiError class, client-side normalizeDoc guard, and apiGet/Post/Patch/Put/Delete helpers.
+- constants/serverConfig.ts created with SERVER_BASE_URL = 'http://localhost:3001'.
+- Playwright test uses page.evaluate with direct fetch() calls from the browser context —
+  avoids Metro module resolution issues while testing the exact same behaviors.
+- Token management verified via localStorage read/write in browser.
+- Authorization header auto-attachment tested by hitting protected /api/users endpoint.
+- 204 No Content verified not to cause JSON parse errors.
+- 8/8 tests pass.
