@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as DB from '../db/database';
+import { storeToken, loadToken, clearToken, apiPost, apiGet, ApiError } from '../services/api';
 
-// ── Types ───────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
 
 export interface RegisterData {
   email: string;
@@ -43,11 +44,44 @@ const AuthContext = createContext<AuthContextType>({
   logout: async () => {},
 });
 
-// ── Provider ─────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+interface ServerUser {
+  id: string;
+  email: string;
+  role: string;
+  fullName: string;
+  country: string;
+  age: string;
+  gender: string;
+  academy: string;
+  weight: string;
+  beltGrade: string;
+  createdAt: string;
+}
+
+function toLocalUser(serverUser: ServerUser): DB.User {
+  return {
+    ...serverUser,
+    passwordHash: '',
+    synced: true,
+  };
+}
+
+function decodeJwtUserId(token: string): string | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return payload.userId ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Provider ──────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<DB.User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading]     = useState(true);
   const [roleDefinitions, setRoleDefinitions] = useState<DB.RoleDefinition[]>([]);
 
   const reloadRoleDefinitions = async () => {
@@ -55,59 +89,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRoleDefinitions(defs);
   };
 
-  // Restore session and load role definitions on app start
+  // Restore session on app start
   useEffect(() => {
-    Promise.all([
-      DB.getSessionUserId().then(async userId => {
-        if (userId) {
-          const user = await DB.getUserById(userId);
-          setCurrentUser(user);
+    async function restore() {
+      try {
+        const token = await loadToken();
+        if (token) {
+          const userId = decodeJwtUserId(token);
+          if (userId) {
+            const user = await apiGet<ServerUser>(`/api/users/${userId}`);
+            setCurrentUser(toLocalUser(user));
+          } else {
+            await clearToken();
+          }
         }
-      }),
-      reloadRoleDefinitions(),
-    ]).then(() => setIsLoading(false));
+      } catch {
+        // Token expired or server unreachable — stay logged out
+        await clearToken();
+      } finally {
+        await reloadRoleDefinitions();
+        setIsLoading(false);
+      }
+    }
+    restore();
   }, []);
 
   const login = async (email: string, password: string): Promise<AuthResult> => {
-    const user = await DB.getUserByEmail(email);
-    if (!user) return { success: false, error: 'Usuario no encontrado' };
-
-    const hash = DB.hashPassword(password);
-    if (user.passwordHash !== hash) {
-      return { success: false, error: 'Contraseña incorrecta' };
+    try {
+      const res = await apiPost<{ token: string; user: ServerUser }>('/api/auth/login', { email, password });
+      await storeToken(res.token);
+      setCurrentUser(toLocalUser(res.user));
+      return { success: true };
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 401) return { success: false, error: 'Credenciales incorrectas' };
+        return { success: false, error: err.message };
+      }
+      return { success: false, error: 'Error de conexión con el servidor' };
     }
-
-    await DB.setSession(user.id);
-    setCurrentUser(user);
-    return { success: true };
   };
 
   const register = async (data: RegisterData): Promise<AuthResult> => {
-    const existing = await DB.getUserByEmail(data.email);
-    if (existing) {
-      return { success: false, error: 'Este correo ya está registrado' };
+    try {
+      const res = await apiPost<{ token: string; user: ServerUser }>('/api/auth/register', {
+        email:     data.email,
+        password:  data.password,
+        fullName:  data.fullName,
+        role:      data.role,
+        country:   data.country,
+        age:       data.age,
+        gender:    data.gender,
+        academy:   data.academy,
+        weight:    data.weight,
+        beltGrade: data.beltGrade,
+      });
+      await storeToken(res.token);
+      setCurrentUser(toLocalUser(res.user));
+      return { success: true };
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 409) return { success: false, error: 'Este correo ya está registrado' };
+        return { success: false, error: err.message };
+      }
+      return { success: false, error: 'Error de conexión con el servidor' };
     }
-
-    const user = await DB.createUser({
-      email: data.email,
-      passwordHash: DB.hashPassword(data.password),
-      role: data.role,
-      fullName: data.fullName,
-      country: data.country,
-      age: data.age,
-      gender: data.gender,
-      academy: data.academy,
-      weight: data.weight,
-      beltGrade: data.beltGrade,
-    });
-
-    await DB.setSession(user.id);
-    setCurrentUser(user);
-    return { success: true };
   };
 
   const logout = async () => {
-    await DB.clearSession();
+    await clearToken();
     setCurrentUser(null);
   };
 
