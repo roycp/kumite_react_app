@@ -1,10 +1,11 @@
 /**
  * db/database.web.ts
- * Web implementation — AsyncStorage JSON document store.
- * Metro automatically uses this file when bundling for web.
+ * All data operations are proxied to the Node.js server via services/api.ts.
+ * AsyncStorage is no longer used for collection data — only 'session:jwt'
+ * (managed by services/api.ts) persists across sessions.
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiGet, apiPost, apiPatch, apiPut, apiDelete, ApiError } from '../services/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -24,12 +25,11 @@ export interface User {
   synced: boolean;
 }
 
-/** One discipline entry within a tournament registration. */
 export interface ModalityEntry {
-  discipline: string;         // e.g. 'Kata', 'Kumite', 'Gi'
-  weightDivision: string | null; // null for disciplines without weight (e.g. Kata)
+  discipline: string;
+  weightDivision: string | null;
   gender: string;
-  ageGroup: string;           // 'Adulto' | 'Sub-18'
+  ageGroup: string;
 }
 
 export interface Registration {
@@ -38,9 +38,9 @@ export interface Registration {
   tournamentId: string;
   tournamentName: string;
   athleteName: string;
-  email?: string;             // optional — not collected in the new wizard
-  academy?: string;           // captured at registration / edit time
-  grade?: string;             // captured at registration / edit time
+  email?: string;
+  academy?: string;
+  grade?: string;
   modalities: ModalityEntry[];
   timestamp: string;
   synced: boolean;
@@ -49,7 +49,7 @@ export interface Registration {
 export interface MartialArt {
   id: string;
   name: string;
-  logo: string;   // emoji or short text, e.g. '🥋'
+  logo: string;
   createdAt: string;
   synced: boolean;
 }
@@ -57,9 +57,9 @@ export interface MartialArt {
 export interface RankSystem {
   id: string;
   martialArtId: string;
-  name: string;               // e.g. '10° Kyu', '1° Dan'
-  description: string;        // e.g. 'White belt'
-  rank: number;               // sort order — lower = beginner
+  name: string;
+  description: string;
+  rank: number;
   classification: 'beginner' | 'advanced';
   applicableTo: 'children' | 'adults' | 'both';
   createdAt: string;
@@ -71,7 +71,7 @@ export interface Organization {
   name: string;
   acronym: string;
   description: string;
-  logo: string;         // emoji or short text
+  logo: string;
   martialArtId: string;
   createdAt: string;
   synced: boolean;
@@ -131,8 +131,8 @@ export interface Tournament {
 
 export interface RoleDefinition {
   id: string;
-  name: string;        // machine name, e.g. 'tournament_organizer'
-  displayName: string; // human-readable, e.g. 'Tournament Organizer'
+  name: string;
+  displayName: string;
   permissions: string[];
   createdAt: string;
   synced: boolean;
@@ -160,329 +160,248 @@ export interface UserMartialArtRank {
   synced: boolean;
 }
 
-// ── Storage keys ──────────────────────────────────────────────────────────────
-
-const KEYS = {
-  USERS:          'db:users',
-  REGISTRATIONS:  'db:registrations',
-  ASSIGNMENTS:    'db:coach_assignments',
-  MARTIAL_ARTS:   'db:martial_arts',
-  RANK_SYSTEMS:   'db:rank_systems',
-  ORGANIZATIONS:  'db:organizations',
-  TEMPLATES:      'db:tournament_templates',
-  TOURNAMENTS:    'db:tournaments',
-  USER_RANKS:     'db:user_martial_art_ranks',
-  ROLE_DEFS:      'db:role_definitions',
-  BRACKET_SEEDS:  'db:bracket_seeds',
-  WEIGH_IN:       'db:weigh_in_results',
-  SESSION:        'db:session_user_id',
-};
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-export function hashPassword(password: string): string {
-  let hash = 5381;
-  for (let i = 0; i < password.length; i++) {
-    hash = ((hash << 5) + hash) ^ password.charCodeAt(i);
-    hash = hash >>> 0;
-  }
-  return hash.toString(16).padStart(8, '0');
-}
-
-function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
-}
-
-async function readCollection<T>(key: string): Promise<T[]> {
-  try {
-    const raw = await AsyncStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-async function writeCollection<T>(key: string, data: T[]): Promise<void> {
-  await AsyncStorage.setItem(key, JSON.stringify(data));
+/** Left for backward compatibility — password hashing is now server-side. */
+export function hashPassword(_password: string): string {
+  return '';
 }
 
 // ── Users ─────────────────────────────────────────────────────────────────────
 
 export async function createUser(data: Omit<User, 'id' | 'createdAt' | 'synced'>): Promise<User> {
-  const users = await readCollection<User>(KEYS.USERS);
-  const user: User = { ...data, id: generateId(), createdAt: new Date().toISOString(), synced: false };
-  users.push(user);
-  await writeCollection(KEYS.USERS, users);
-  return user;
+  const user = await apiPost<User>('/api/users', data);
+  return { ...user, synced: true };
 }
 
 export async function getUserByEmail(email: string): Promise<User | null> {
-  const users = await readCollection<User>(KEYS.USERS);
-  return users.find(u => u.email.toLowerCase() === email.toLowerCase()) ?? null;
+  try {
+    const users = await apiGet<User[]>(`/api/users?email=${encodeURIComponent(email)}`);
+    return users[0] ? { ...users[0], synced: true } : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function getUserById(id: string): Promise<User | null> {
-  const users = await readCollection<User>(KEYS.USERS);
-  return users.find(u => u.id === id) ?? null;
+  try {
+    const user = await apiGet<User>(`/api/users/${id}`);
+    return { ...user, synced: true };
+  } catch {
+    return null;
+  }
 }
 
 export async function getAllUsers(): Promise<User[]> {
-  return readCollection<User>(KEYS.USERS);
+  const users = await apiGet<User[]>('/api/users');
+  return users.map(u => ({ ...u, synced: true }));
 }
 
 export async function getAllAthletes(): Promise<User[]> {
-  const users = await readCollection<User>(KEYS.USERS);
-  return users.filter(u => u.role === 'athlete');
+  const users = await apiGet<User[]>('/api/users?role=athlete');
+  return users.map(u => ({ ...u, synced: true }));
 }
 
 export async function getUsersByIds(ids: string[]): Promise<User[]> {
   if (ids.length === 0) return [];
-  const users = await readCollection<User>(KEYS.USERS);
-  return users.filter(u => ids.includes(u.id));
+  const all = await apiGet<User[]>('/api/users');
+  return all.filter(u => ids.includes(u.id)).map(u => ({ ...u, synced: true }));
 }
 
 export async function getRegistrationsByAthleteIds(athleteIds: string[]): Promise<Registration[]> {
   if (athleteIds.length === 0) return [];
-  const registrations = await readCollection<Registration>(KEYS.REGISTRATIONS);
-  return registrations.filter(r => athleteIds.includes(r.userId));
+  const all = await apiGet<Registration[]>('/api/registrations');
+  return all.filter(r => athleteIds.includes(r.userId)).map(r => ({ ...r, synced: true }));
 }
 
 export async function updateUser(id: string, updates: Partial<Omit<User, 'id'>>): Promise<void> {
-  const users = await readCollection<User>(KEYS.USERS);
-  const idx = users.findIndex(u => u.id === id);
-  if (idx !== -1) { users[idx] = { ...users[idx], ...updates }; await writeCollection(KEYS.USERS, users); }
+  await apiPatch(`/api/users/${id}`, updates);
 }
 
-// ── Session ───────────────────────────────────────────────────────────────────
+// ── Session stubs (token management is in services/api.ts) ────────────────────
 
-export async function setSession(userId: string): Promise<void> {
-  await AsyncStorage.setItem(KEYS.SESSION, userId);
-}
-
-export async function getSessionUserId(): Promise<string | null> {
-  return AsyncStorage.getItem(KEYS.SESSION);
-}
-
-export async function clearSession(): Promise<void> {
-  await AsyncStorage.removeItem(KEYS.SESSION);
-}
+export async function setSession(_userId: string): Promise<void> {}
+export async function getSessionUserId(): Promise<string | null> { return null; }
+export async function clearSession(): Promise<void> {}
 
 // ── Registrations ─────────────────────────────────────────────────────────────
 
 export async function addRegistration(data: Omit<Registration, 'id' | 'synced'>): Promise<Registration> {
-  const registrations = await readCollection<Registration>(KEYS.REGISTRATIONS);
-  const registration: Registration = { ...data, id: generateId(), synced: false };
-  registrations.push(registration);
-  await writeCollection(KEYS.REGISTRATIONS, registrations);
-  return registration;
+  const reg = await apiPost<Registration>('/api/registrations', data);
+  return { ...reg, synced: true };
 }
 
 export async function getRegistrationsByUserId(userId: string): Promise<Registration[]> {
-  const registrations = await readCollection<Registration>(KEYS.REGISTRATIONS);
-  return registrations.filter(r => r.userId === userId);
+  const regs = await apiGet<Registration[]>(`/api/registrations?userId=${encodeURIComponent(userId)}`);
+  return regs.map(r => ({ ...r, synced: true }));
 }
 
 export async function getRegistrationsByTournamentId(tournamentId: string): Promise<Registration[]> {
-  const registrations = await readCollection<Registration>(KEYS.REGISTRATIONS);
-  return registrations.filter(r => r.tournamentId === tournamentId);
+  const regs = await apiGet<Registration[]>(`/api/registrations?tournamentId=${encodeURIComponent(tournamentId)}`);
+  return regs.map(r => ({ ...r, synced: true }));
 }
 
-/** Returns unique tournament IDs the user is already registered for. */
 export async function getRegisteredTournamentIds(userId: string): Promise<string[]> {
-  const registrations = await readCollection<Registration>(KEYS.REGISTRATIONS);
-  return [...new Set(registrations.filter(r => r.userId === userId).map(r => r.tournamentId))];
+  const regs = await apiGet<Registration[]>(`/api/registrations?userId=${encodeURIComponent(userId)}`);
+  return [...new Set(regs.map(r => r.tournamentId))];
 }
 
-/** Update an existing registration (modalities, etc.). */
 export async function updateRegistration(id: string, updates: Partial<Omit<Registration, 'id' | 'synced'>>): Promise<void> {
-  const registrations = await readCollection<Registration>(KEYS.REGISTRATIONS);
-  const idx = registrations.findIndex(r => r.id === id);
-  if (idx !== -1) {
-    registrations[idx] = { ...registrations[idx], ...updates };
-    await writeCollection(KEYS.REGISTRATIONS, registrations);
-  }
+  await apiPatch(`/api/registrations/${id}`, updates);
 }
 
-/** Delete a registration by id. */
 export async function deleteRegistration(id: string): Promise<void> {
-  const registrations = await readCollection<Registration>(KEYS.REGISTRATIONS);
-  await writeCollection(KEYS.REGISTRATIONS, registrations.filter(r => r.id !== id));
+  await apiDelete(`/api/registrations/${id}`);
 }
 
 // ── Martial Arts ──────────────────────────────────────────────────────────────
 
 export async function createMartialArt(data: Pick<MartialArt, 'name' | 'logo'>): Promise<MartialArt> {
-  const arts = await readCollection<MartialArt>(KEYS.MARTIAL_ARTS);
-  const art: MartialArt = { ...data, id: generateId(), createdAt: new Date().toISOString(), synced: false };
-  arts.push(art);
-  await writeCollection(KEYS.MARTIAL_ARTS, arts);
-  return art;
+  const art = await apiPost<MartialArt>('/api/martial-arts', data);
+  return { ...art, synced: true };
 }
 
 export async function getAllMartialArts(): Promise<MartialArt[]> {
-  return readCollection<MartialArt>(KEYS.MARTIAL_ARTS);
+  const arts = await apiGet<MartialArt[]>('/api/martial-arts');
+  return arts.map(a => ({ ...a, synced: true }));
 }
 
 export async function updateMartialArt(id: string, updates: Partial<Pick<MartialArt, 'name' | 'logo'>>): Promise<void> {
-  const arts = await readCollection<MartialArt>(KEYS.MARTIAL_ARTS);
-  const idx = arts.findIndex(a => a.id === id);
-  if (idx !== -1) { arts[idx] = { ...arts[idx], ...updates }; await writeCollection(KEYS.MARTIAL_ARTS, arts); }
+  await apiPatch(`/api/martial-arts/${id}`, updates);
 }
 
 export async function deleteMartialArt(id: string): Promise<void> {
-  const arts = await readCollection<MartialArt>(KEYS.MARTIAL_ARTS);
-  await writeCollection(KEYS.MARTIAL_ARTS, arts.filter(a => a.id !== id));
+  await apiDelete(`/api/martial-arts/${id}`);
 }
 
 // ── Rank Systems ──────────────────────────────────────────────────────────────
 
 export async function createRankSystem(data: Omit<RankSystem, 'id' | 'createdAt' | 'synced'>): Promise<RankSystem> {
-  const ranks = await readCollection<RankSystem>(KEYS.RANK_SYSTEMS);
-  const rank: RankSystem = { ...data, id: generateId(), createdAt: new Date().toISOString(), synced: false };
-  ranks.push(rank);
-  await writeCollection(KEYS.RANK_SYSTEMS, ranks);
-  return rank;
+  const rank = await apiPost<RankSystem>('/api/rank-systems', data);
+  return { ...rank, synced: true };
 }
 
 export async function getRankSystemsByMartialArtId(martialArtId: string): Promise<RankSystem[]> {
-  const ranks = await readCollection<RankSystem>(KEYS.RANK_SYSTEMS);
-  return ranks.filter(r => r.martialArtId === martialArtId).sort((a, b) => a.rank - b.rank);
+  const ranks = await apiGet<RankSystem[]>(`/api/rank-systems?martialArtId=${encodeURIComponent(martialArtId)}`);
+  return ranks.sort((a, b) => a.rank - b.rank).map(r => ({ ...r, synced: true }));
 }
 
 export async function updateRankSystem(id: string, updates: Partial<Omit<RankSystem, 'id' | 'martialArtId' | 'createdAt' | 'synced'>>): Promise<void> {
-  const ranks = await readCollection<RankSystem>(KEYS.RANK_SYSTEMS);
-  const idx = ranks.findIndex(r => r.id === id);
-  if (idx !== -1) { ranks[idx] = { ...ranks[idx], ...updates }; await writeCollection(KEYS.RANK_SYSTEMS, ranks); }
+  await apiPatch(`/api/rank-systems/${id}`, updates);
 }
 
 export async function deleteRankSystem(id: string): Promise<void> {
-  const ranks = await readCollection<RankSystem>(KEYS.RANK_SYSTEMS);
-  await writeCollection(KEYS.RANK_SYSTEMS, ranks.filter(r => r.id !== id));
+  await apiDelete(`/api/rank-systems/${id}`);
 }
 
 // ── Organizations ─────────────────────────────────────────────────────────────
 
 export async function createOrganization(data: Omit<Organization, 'id' | 'createdAt' | 'synced'>): Promise<Organization> {
-  const orgs = await readCollection<Organization>(KEYS.ORGANIZATIONS);
-  const org: Organization = { ...data, id: generateId(), createdAt: new Date().toISOString(), synced: false };
-  orgs.push(org);
-  await writeCollection(KEYS.ORGANIZATIONS, orgs);
-  return org;
+  const org = await apiPost<Organization>('/api/organizations', data);
+  return { ...org, synced: true };
 }
 
 export async function getAllOrganizations(): Promise<Organization[]> {
-  return readCollection<Organization>(KEYS.ORGANIZATIONS);
+  const orgs = await apiGet<Organization[]>('/api/organizations');
+  return orgs.map(o => ({ ...o, synced: true }));
 }
 
 export async function updateOrganization(id: string, updates: Partial<Omit<Organization, 'id' | 'createdAt' | 'synced'>>): Promise<void> {
-  const orgs = await readCollection<Organization>(KEYS.ORGANIZATIONS);
-  const idx = orgs.findIndex(o => o.id === id);
-  if (idx !== -1) { orgs[idx] = { ...orgs[idx], ...updates }; await writeCollection(KEYS.ORGANIZATIONS, orgs); }
+  await apiPatch(`/api/organizations/${id}`, updates);
 }
 
 export async function deleteOrganization(id: string): Promise<void> {
-  const orgs = await readCollection<Organization>(KEYS.ORGANIZATIONS);
-  await writeCollection(KEYS.ORGANIZATIONS, orgs.filter(o => o.id !== id));
+  await apiDelete(`/api/organizations/${id}`);
 }
 
 // ── Tournament Templates ──────────────────────────────────────────────────────
 
 export async function createTemplate(data: Omit<TournamentTemplate, 'id' | 'createdAt' | 'synced'>): Promise<TournamentTemplate> {
-  const templates = await readCollection<TournamentTemplate>(KEYS.TEMPLATES);
-  const template: TournamentTemplate = { ...data, id: generateId(), createdAt: new Date().toISOString(), synced: false };
-  templates.push(template);
-  await writeCollection(KEYS.TEMPLATES, templates);
-  return template;
+  const template = await apiPost<TournamentTemplate>('/api/tournament-templates', data);
+  return { ...template, synced: true };
 }
 
 export async function getAllTemplates(): Promise<TournamentTemplate[]> {
-  return readCollection<TournamentTemplate>(KEYS.TEMPLATES);
+  const templates = await apiGet<TournamentTemplate[]>('/api/tournament-templates');
+  return templates.map(t => ({ ...t, synced: true }));
 }
 
 export async function updateTemplate(id: string, updates: Partial<Omit<TournamentTemplate, 'id' | 'createdAt' | 'synced'>>): Promise<void> {
-  const templates = await readCollection<TournamentTemplate>(KEYS.TEMPLATES);
-  const idx = templates.findIndex(t => t.id === id);
-  if (idx !== -1) { templates[idx] = { ...templates[idx], ...updates }; await writeCollection(KEYS.TEMPLATES, templates); }
+  await apiPatch(`/api/tournament-templates/${id}`, updates);
 }
 
 export async function deleteTemplate(id: string): Promise<void> {
-  const templates = await readCollection<TournamentTemplate>(KEYS.TEMPLATES);
-  await writeCollection(KEYS.TEMPLATES, templates.filter(t => t.id !== id));
+  await apiDelete(`/api/tournament-templates/${id}`);
 }
 
 // ── Tournaments ───────────────────────────────────────────────────────────────
 
 export async function createTournament(data: Omit<Tournament, 'id' | 'createdAt' | 'synced'>): Promise<Tournament> {
-  const tournaments = await readCollection<Tournament>(KEYS.TOURNAMENTS);
-  const tournament: Tournament = { ...data, id: generateId(), createdAt: new Date().toISOString(), synced: false };
-  tournaments.push(tournament);
-  await writeCollection(KEYS.TOURNAMENTS, tournaments);
-  return tournament;
+  const tournament = await apiPost<Tournament>('/api/tournaments', data);
+  return { ...tournament, synced: true };
 }
 
 export async function getAllTournaments(): Promise<Tournament[]> {
-  return readCollection<Tournament>(KEYS.TOURNAMENTS);
+  const tournaments = await apiGet<Tournament[]>('/api/tournaments');
+  return tournaments.map(t => ({ ...t, synced: true }));
 }
 
 export async function getTournamentById(id: string): Promise<Tournament | null> {
-  const tournaments = await readCollection<Tournament>(KEYS.TOURNAMENTS);
-  return tournaments.find(t => t.id === id) ?? null;
+  try {
+    const tournament = await apiGet<Tournament>(`/api/tournaments/${id}`);
+    return { ...tournament, synced: true };
+  } catch {
+    return null;
+  }
 }
 
 export async function updateTournament(id: string, updates: Partial<Omit<Tournament, 'id' | 'createdAt' | 'synced'>>): Promise<void> {
-  const tournaments = await readCollection<Tournament>(KEYS.TOURNAMENTS);
-  const idx = tournaments.findIndex(t => t.id === id);
-  if (idx !== -1) { tournaments[idx] = { ...tournaments[idx], ...updates }; await writeCollection(KEYS.TOURNAMENTS, tournaments); }
+  await apiPatch(`/api/tournaments/${id}`, updates);
 }
 
 export async function deleteTournament(id: string): Promise<void> {
-  const tournaments = await readCollection<Tournament>(KEYS.TOURNAMENTS);
-  await writeCollection(KEYS.TOURNAMENTS, tournaments.filter(t => t.id !== id));
+  await apiDelete(`/api/tournaments/${id}`);
 }
 
 // ── User Martial Art Ranks ────────────────────────────────────────────────────
 
 export async function getUserMartialArtRanks(userId: string): Promise<UserMartialArtRank[]> {
-  const ranks = await readCollection<UserMartialArtRank>(KEYS.USER_RANKS);
-  return ranks.filter(r => r.userId === userId);
+  const ranks = await apiGet<UserMartialArtRank[]>(`/api/user-martial-art-ranks?userId=${encodeURIComponent(userId)}`);
+  return ranks.map(r => ({ ...r, synced: true }));
 }
 
 export async function upsertUserMartialArtRank(userId: string, martialArtId: string, rankSystemId: string): Promise<void> {
-  const ranks = await readCollection<UserMartialArtRank>(KEYS.USER_RANKS);
-  const idx = ranks.findIndex(r => r.userId === userId && r.martialArtId === martialArtId);
-  if (idx !== -1) {
-    ranks[idx] = { ...ranks[idx], rankSystemId };
-  } else {
-    ranks.push({ id: generateId(), userId, martialArtId, rankSystemId, createdAt: new Date().toISOString(), synced: false });
-  }
-  await writeCollection(KEYS.USER_RANKS, ranks);
+  await apiPost('/api/user-martial-art-ranks', { userId, martialArtId, rankSystemId });
 }
 
 export async function removeUserMartialArtRank(userId: string, martialArtId: string): Promise<void> {
-  const ranks = await readCollection<UserMartialArtRank>(KEYS.USER_RANKS);
-  await writeCollection(KEYS.USER_RANKS, ranks.filter(r => !(r.userId === userId && r.martialArtId === martialArtId)));
+  const ranks = await apiGet<UserMartialArtRank[]>(
+    `/api/user-martial-art-ranks?userId=${encodeURIComponent(userId)}&martialArtId=${encodeURIComponent(martialArtId)}`,
+  );
+  if (ranks[0]) await apiDelete(`/api/user-martial-art-ranks/${ranks[0].id}`);
 }
 
-// ── Manager assignments ───────────────────────────────────────────────────────
+// ── Coach / Manager Assignments ───────────────────────────────────────────────
 
 export async function assignAthleteToManager(managerId: string, athleteId: string): Promise<void> {
-  const assignments = await readCollection<CoachAssignment>(KEYS.ASSIGNMENTS);
-  if (!assignments.some(a => a.coachId === managerId && a.athleteId === athleteId)) {
-    assignments.push({ id: generateId(), coachId: managerId, athleteId, createdAt: new Date().toISOString(), synced: false });
-    await writeCollection(KEYS.ASSIGNMENTS, assignments);
+  try {
+    await apiPost('/api/coach-assignments', { coachId: managerId, athleteId });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 409) return; // already assigned
+    throw err;
   }
 }
 
 export async function removeAthleteFromManager(managerId: string, athleteId: string): Promise<void> {
-  const assignments = await readCollection<CoachAssignment>(KEYS.ASSIGNMENTS);
-  await writeCollection(KEYS.ASSIGNMENTS, assignments.filter(a => !(a.coachId === managerId && a.athleteId === athleteId)));
+  const all = await apiGet<CoachAssignment[]>(`/api/coach-assignments?coachId=${encodeURIComponent(managerId)}`);
+  const match = all.find(a => a.athleteId === athleteId);
+  if (match) await apiDelete(`/api/coach-assignments/${match.id}`);
 }
 
 export async function getAthletesByManagerId(managerId: string): Promise<User[]> {
-  const assignments = await readCollection<CoachAssignment>(KEYS.ASSIGNMENTS);
-  const ids = assignments.filter(a => a.coachId === managerId).map(a => a.athleteId);
-  const users = await readCollection<User>(KEYS.USERS);
-  return users.filter(u => ids.includes(u.id));
+  const assignments = await apiGet<CoachAssignment[]>(`/api/coach-assignments?coachId=${encodeURIComponent(managerId)}`);
+  const ids = assignments.map(a => a.athleteId);
+  return getUsersByIds(ids);
 }
 
 /** @deprecated Use assignAthleteToManager */
@@ -492,89 +411,54 @@ export const removeAthleteFromCoach = removeAthleteFromManager;
 /** @deprecated Use getAthletesByManagerId */
 export const getAthletesByCoachId = getAthletesByManagerId;
 
-// ── Sync helpers ──────────────────────────────────────────────────────────────
+// ── Sync helpers (no-ops — server is source of truth) ────────────────────────
 
 export async function getUnsyncedData() {
-  const [users, registrations, assignments] = await Promise.all([
-    readCollection<User>(KEYS.USERS),
-    readCollection<Registration>(KEYS.REGISTRATIONS),
-    readCollection<CoachAssignment>(KEYS.ASSIGNMENTS),
-  ]);
-  return {
-    users:         users.filter(u => !u.synced),
-    registrations: registrations.filter(r => !r.synced),
-    assignments:   assignments.filter(a => !a.synced),
-  };
+  return { users: [], registrations: [], assignments: [] };
 }
 
-export async function markAllSynced(): Promise<void> {
-  const mark = <T extends { synced: boolean }>(items: T[]) => items.map(i => ({ ...i, synced: true }));
-  const [users, registrations, assignments] = await Promise.all([
-    readCollection<User>(KEYS.USERS),
-    readCollection<Registration>(KEYS.REGISTRATIONS),
-    readCollection<CoachAssignment>(KEYS.ASSIGNMENTS),
-  ]);
-  await Promise.all([
-    writeCollection(KEYS.USERS, mark(users)),
-    writeCollection(KEYS.REGISTRATIONS, mark(registrations)),
-    writeCollection(KEYS.ASSIGNMENTS, mark(assignments)),
-  ]);
-}
+export async function markAllSynced(): Promise<void> {}
 
 // ── Role Definitions ──────────────────────────────────────────────────────────
 
 export async function getAllRoleDefinitions(): Promise<RoleDefinition[]> {
-  return readCollection<RoleDefinition>(KEYS.ROLE_DEFS);
+  const defs = await apiGet<RoleDefinition[]>('/api/role-definitions');
+  return defs.map(d => ({ ...d, synced: true }));
 }
 
 export async function createRoleDefinition(
   data: Pick<RoleDefinition, 'name' | 'displayName' | 'permissions'>,
 ): Promise<RoleDefinition> {
-  const defs = await readCollection<RoleDefinition>(KEYS.ROLE_DEFS);
-  const def: RoleDefinition = {
-    id:          generateId(),
-    name:        data.name,
-    displayName: data.displayName,
-    permissions: data.permissions,
-    createdAt:   new Date().toISOString(),
-    synced:      false,
-  };
-  await writeCollection(KEYS.ROLE_DEFS, [...defs, def]);
-  return def;
+  const def = await apiPost<RoleDefinition>('/api/role-definitions', data);
+  return { ...def, synced: true };
 }
 
 export async function updateRoleDefinition(
   id: string,
   patch: Partial<Pick<RoleDefinition, 'name' | 'displayName' | 'permissions'>>,
 ): Promise<void> {
-  const defs = await readCollection<RoleDefinition>(KEYS.ROLE_DEFS);
-  await writeCollection(
-    KEYS.ROLE_DEFS,
-    defs.map(d => (d.id === id ? { ...d, ...patch } : d)),
-  );
+  await apiPatch(`/api/role-definitions/${id}`, patch);
 }
 
 export async function deleteRoleDefinition(id: string): Promise<void> {
-  const defs = await readCollection<RoleDefinition>(KEYS.ROLE_DEFS);
-  await writeCollection(KEYS.ROLE_DEFS, defs.filter(d => d.id !== id));
+  await apiDelete(`/api/role-definitions/${id}`);
 }
 
 // ── Bracket Seeds ─────────────────────────────────────────────────────────────
 
-interface BracketSeedRecord { tournamentId: string; seeds: Record<string, string[]>; }
-
 export async function getBracketSeeds(tournamentId: string): Promise<Record<string, string[]>> {
-  const all = await readCollection<BracketSeedRecord>(KEYS.BRACKET_SEEDS);
-  return all.find(r => r.tournamentId === tournamentId)?.seeds ?? {};
+  try {
+    const res = await apiGet<{ tournamentId: string; seeds: Record<string, string[]> }>(
+      `/api/bracket-seeds/${encodeURIComponent(tournamentId)}`,
+    );
+    return res.seeds ?? {};
+  } catch {
+    return {};
+  }
 }
 
-export async function saveBracketSeeds(
-  tournamentId: string,
-  seeds: Record<string, string[]>,
-): Promise<void> {
-  const all = await readCollection<BracketSeedRecord>(KEYS.BRACKET_SEEDS);
-  const updated = all.filter(r => r.tournamentId !== tournamentId);
-  await writeCollection(KEYS.BRACKET_SEEDS, [...updated, { tournamentId, seeds }]);
+export async function saveBracketSeeds(tournamentId: string, seeds: Record<string, string[]>): Promise<void> {
+  await apiPut(`/api/bracket-seeds/${encodeURIComponent(tournamentId)}`, { seeds });
 }
 
 // ── Weigh-In Results ──────────────────────────────────────────────────────────
@@ -582,18 +466,11 @@ export async function saveBracketSeeds(
 export async function saveWeighInResult(
   data: Omit<WeighInResult, 'id' | 'timestamp' | 'synced'>,
 ): Promise<WeighInResult> {
-  const all = await readCollection<WeighInResult>(KEYS.WEIGH_IN);
-  const record: WeighInResult = {
-    ...data,
-    id: generateId(),
-    timestamp: new Date().toISOString(),
-    synced: false,
-  };
-  await writeCollection(KEYS.WEIGH_IN, [...all, record]);
-  return record;
+  const result = await apiPost<WeighInResult>('/api/weigh-in-results', data);
+  return { ...result, synced: true };
 }
 
 export async function getWeighInResultsByTournamentId(tournamentId: string): Promise<WeighInResult[]> {
-  const all = await readCollection<WeighInResult>(KEYS.WEIGH_IN);
-  return all.filter(r => r.tournamentId === tournamentId);
+  const results = await apiGet<WeighInResult[]>(`/api/weigh-in-results?tournamentId=${encodeURIComponent(tournamentId)}`);
+  return results.map(r => ({ ...r, synced: true }));
 }
