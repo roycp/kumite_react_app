@@ -1,0 +1,338 @@
+Priority: 4
+Description: Replace every AsyncStorage read/write in db/database.web.ts with calls to the Node.js server REST API. All 13 collections are redirected through the server. Local AsyncStorage is kept only for the JWT session token (managed by services/api.ts).
+Resolved: (no)
+State: (waiting)
+Depends on: 01-server-missing-routes.txt, 02-app-api-client-service.txt, 03-migrate-auth-to-server.txt
+Criteria of success:
+  - Every exported function in database.web.ts calls the server instead of AsyncStorage
+  - All function signatures and return types remain identical (no callers need changes)
+  - The app works end-to-end: login, view tournaments, register for tournament, weigh-in, bracket seeds, admin CRUD
+  - AsyncStorage is no longer used for any collection data (only 'session:jwt' remains via services/api.ts)
+  - The readCollection / writeCollection helpers are removed (dead code)
+  - generateId() is removed (IDs come from MongoDB now)
+  - hashPassword() is removed (handled server-side with bcrypt)
+  - The synced field on returned objects is always set to true (data is on server by definition)
+Plan generated: (yes)
+Playwright test created: (no)
+Playwright test is passing: (no)
+Unit test created: (no)
+
+────────────────────────────────────────────────────────────────
+## Context
+
+db/database.web.ts is the single database abstraction used by all screens
+and contexts (except AuthContext after ticket 03). It exports ~40 functions
+across 13 collections. Each function currently reads/writes to AsyncStorage.
+
+After this ticket, each function becomes a thin wrapper over an apiGet /
+apiPost / apiPatch / apiDelete call. The file keeps the same exported
+interface so no screens need changes.
+
+Server endpoints used here (all from tickets 01 and existing routes):
+  /api/users                      GET (with ?role=, ?email=), POST, PATCH /:id
+  /api/registrations              GET (with ?userId=, ?tournamentId=), POST, PATCH /:id, DELETE /:id
+  /api/martial-arts               GET, POST, PATCH /:id, DELETE /:id
+  /api/rank-systems               GET (with ?martialArtId=), POST, PATCH /:id, DELETE /:id
+  /api/organizations              GET, POST, PATCH /:id, DELETE /:id
+  /api/tournament-templates       GET, POST, PATCH /:id, DELETE /:id
+  /api/tournaments                GET, GET /:id, POST, PATCH /:id, DELETE /:id
+  /api/user-martial-art-ranks     GET (with ?userId=), POST (upsert), DELETE /:id
+  /api/coach-assignments          GET (with ?coachId=), POST, DELETE /:id
+  /api/role-definitions           GET, POST, PATCH /:id, DELETE /:id
+  /api/bracket-seeds/:tid         GET, PUT
+  /api/weigh-in-results           GET (with ?tournamentId=), POST
+
+────────────────────────────────────────────────────────────────
+## Execution Plan
+
+### A. Rewrite the top of database.web.ts
+
+Remove:
+  - import AsyncStorage from '@react-native-async-storage/async-storage'
+  - const KEYS = { ... }
+  - function generateId()
+  - function readCollection<T>()
+  - function writeCollection<T>()
+  - export function hashPassword()  (was only used by old AuthContext)
+
+Add:
+  import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from '../services/api';
+
+Keep all type/interface definitions unchanged.
+
+────────────────────────────────────────────────────────────────
+### B. Users
+
+export async function createUser(data): Promise<User>
+  → apiPost<User>('/api/users', { ...data })
+  Note: prefer using /api/auth/register from AuthContext. This function
+  stays for any edge case (e.g., admin creating a user).
+
+export async function getUserByEmail(email: string): Promise<User | null>
+  → const users = await apiGet<User[]>(`/api/users?email=${encodeURIComponent(email)}`)
+  → return users[0] ?? null
+  Requires ticket 01's query-param support on GET /api/users.
+
+export async function getUserById(id: string): Promise<User | null>
+  → try { return await apiGet<User>(`/api/users/${id}`) }
+  → catch { return null }
+
+export async function getAllUsers(): Promise<User[]>
+  → return apiGet<User[]>('/api/users')
+
+export async function getAllAthletes(): Promise<User[]>
+  → return apiGet<User[]>('/api/users?role=athlete')
+
+export async function getUsersByIds(ids: string[]): Promise<User[]>
+  → if (ids.length === 0) return []
+  → const all = await apiGet<User[]>('/api/users')
+  → return all.filter(u => ids.includes(u.id))
+  (Simple approach — avoid N parallel requests for now)
+
+export async function getRegistrationsByAthleteIds(ids: string[]): Promise<Registration[]>
+  → if (ids.length === 0) return []
+  → const all = await apiGet<Registration[]>('/api/registrations')
+  → return all.filter(r => ids.includes(r.userId))
+
+export async function updateUser(id: string, updates: Partial<User>): Promise<void>
+  → await apiPatch(`/api/users/${id}`, updates)
+
+────────────────────────────────────────────────────────────────
+### C. Session functions (leave as stubs — AuthContext now owns tokens)
+
+export async function setSession(_userId: string): Promise<void> { }
+export async function getSessionUserId(): Promise<string | null> { return null; }
+export async function clearSession(): Promise<void> { }
+
+These are no-ops after ticket 03. Keeping them prevents TypeScript errors
+if any screen still calls them. Remove them in a cleanup pass later.
+
+────────────────────────────────────────────────────────────────
+### D. Registrations
+
+export async function addRegistration(data): Promise<Registration>
+  → return apiPost<Registration>('/api/registrations', data)
+
+export async function getRegistrationsByUserId(userId: string): Promise<Registration[]>
+  → return apiGet<Registration[]>(`/api/registrations?userId=${userId}`)
+
+export async function getRegistrationsByTournamentId(tournamentId: string): Promise<Registration[]>
+  → return apiGet<Registration[]>(`/api/registrations?tournamentId=${tournamentId}`)
+
+export async function getRegisteredTournamentIds(userId: string): Promise<string[]>
+  → const regs = await apiGet<Registration[]>(`/api/registrations?userId=${userId}`)
+  → return [...new Set(regs.map(r => r.tournamentId))]
+
+export async function updateRegistration(id: string, updates): Promise<void>
+  → await apiPatch(`/api/registrations/${id}`, updates)
+
+export async function deleteRegistration(id: string): Promise<void>
+  → await apiDelete(`/api/registrations/${id}`)
+
+────────────────────────────────────────────────────────────────
+### E. Martial Arts
+
+export async function createMartialArt(data): Promise<MartialArt>
+  → return apiPost<MartialArt>('/api/martial-arts', data)
+
+export async function getAllMartialArts(): Promise<MartialArt[]>
+  → return apiGet<MartialArt[]>('/api/martial-arts')
+
+export async function updateMartialArt(id, updates): Promise<void>
+  → await apiPatch(`/api/martial-arts/${id}`, updates)
+
+export async function deleteMartialArt(id: string): Promise<void>
+  → await apiDelete(`/api/martial-arts/${id}`)
+
+────────────────────────────────────────────────────────────────
+### F. Rank Systems
+
+export async function createRankSystem(data): Promise<RankSystem>
+  → return apiPost<RankSystem>('/api/rank-systems', data)
+
+export async function getRankSystemsByMartialArtId(martialArtId: string): Promise<RankSystem[]>
+  → const ranks = await apiGet<RankSystem[]>(`/api/rank-systems?martialArtId=${martialArtId}`)
+  → return ranks.sort((a, b) => a.rank - b.rank)
+
+export async function updateRankSystem(id, updates): Promise<void>
+  → await apiPatch(`/api/rank-systems/${id}`, updates)
+
+export async function deleteRankSystem(id: string): Promise<void>
+  → await apiDelete(`/api/rank-systems/${id}`)
+
+────────────────────────────────────────────────────────────────
+### G. Organizations
+
+export async function createOrganization(data): Promise<Organization>
+  → return apiPost<Organization>('/api/organizations', data)
+
+export async function getAllOrganizations(): Promise<Organization[]>
+  → return apiGet<Organization[]>('/api/organizations')
+
+export async function updateOrganization(id, updates): Promise<void>
+  → await apiPatch(`/api/organizations/${id}`, updates)
+
+export async function deleteOrganization(id: string): Promise<void>
+  → await apiDelete(`/api/organizations/${id}`)
+
+────────────────────────────────────────────────────────────────
+### H. Tournament Templates
+
+export async function createTemplate(data): Promise<TournamentTemplate>
+  → return apiPost<TournamentTemplate>('/api/tournament-templates', data)
+
+export async function getAllTemplates(): Promise<TournamentTemplate[]>
+  → return apiGet<TournamentTemplate[]>('/api/tournament-templates')
+
+export async function updateTemplate(id, updates): Promise<void>
+  → await apiPatch(`/api/tournament-templates/${id}`, updates)
+
+export async function deleteTemplate(id: string): Promise<void>
+  → await apiDelete(`/api/tournament-templates/${id}`)
+
+────────────────────────────────────────────────────────────────
+### I. Tournaments
+
+export async function createTournament(data): Promise<Tournament>
+  → return apiPost<Tournament>('/api/tournaments', data)
+
+export async function getAllTournaments(): Promise<Tournament[]>
+  → return apiGet<Tournament[]>('/api/tournaments')
+
+export async function getTournamentById(id: string): Promise<Tournament | null>
+  → try { return await apiGet<Tournament>(`/api/tournaments/${id}`) }
+  → catch { return null }
+
+export async function updateTournament(id, updates): Promise<void>
+  → await apiPatch(`/api/tournaments/${id}`, updates)
+
+export async function deleteTournament(id: string): Promise<void>
+  → await apiDelete(`/api/tournaments/${id}`)
+
+────────────────────────────────────────────────────────────────
+### J. User Martial Art Ranks
+
+export async function getUserMartialArtRanks(userId: string): Promise<UserMartialArtRank[]>
+  → return apiGet<UserMartialArtRank[]>(`/api/user-martial-art-ranks?userId=${userId}`)
+
+export async function upsertUserMartialArtRank(userId, martialArtId, rankSystemId): Promise<void>
+  → await apiPost('/api/user-martial-art-ranks', { userId, martialArtId, rankSystemId })
+  (Server does findOneAndUpdate with upsert:true — see ticket 01)
+
+export async function removeUserMartialArtRank(userId, martialArtId): Promise<void>
+  → const ranks = await apiGet<UserMartialArtRank[]>(
+      `/api/user-martial-art-ranks?userId=${userId}&martialArtId=${martialArtId}`
+    )
+  → if (ranks[0]) await apiDelete(`/api/user-martial-art-ranks/${ranks[0].id}`)
+
+────────────────────────────────────────────────────────────────
+### K. Coach / Manager Assignments
+
+export async function assignAthleteToManager(managerId, athleteId): Promise<void>
+  → try { await apiPost('/api/coach-assignments', { coachId: managerId, athleteId }) }
+  → catch (err) { if (err instanceof ApiError && err.status === 409) return; throw err; }
+  (409 = duplicate, silently ignore just like the old duplicate check)
+
+export async function removeAthleteFromManager(managerId, athleteId): Promise<void>
+  → const all = await apiGet<any[]>(`/api/coach-assignments?coachId=${managerId}`)
+  → const match = all.find(a => a.athleteId === athleteId)
+  → if (match) await apiDelete(`/api/coach-assignments/${match.id}`)
+
+export async function getAthletesByManagerId(managerId: string): Promise<User[]>
+  → const assignments = await apiGet<any[]>(`/api/coach-assignments?coachId=${managerId}`)
+  → const ids = assignments.map(a => a.athleteId)
+  → return getUsersByIds(ids)
+
+Keep deprecated aliases (assignAthleteToCoach, etc.) pointing to the new functions.
+
+────────────────────────────────────────────────────────────────
+### L. Role Definitions
+
+export async function getAllRoleDefinitions(): Promise<RoleDefinition[]>
+  → return apiGet<RoleDefinition[]>('/api/role-definitions')
+
+export async function createRoleDefinition(data): Promise<RoleDefinition>
+  → return apiPost<RoleDefinition>('/api/role-definitions', data)
+
+export async function updateRoleDefinition(id, patch): Promise<void>
+  → await apiPatch(`/api/role-definitions/${id}`, patch)
+
+export async function deleteRoleDefinition(id: string): Promise<void>
+  → await apiDelete(`/api/role-definitions/${id}`)
+
+────────────────────────────────────────────────────────────────
+### M. Bracket Seeds
+
+export async function getBracketSeeds(tournamentId: string): Promise<Record<string, string[]>>
+  → try {
+      const res = await apiGet<{ tournamentId: string; seeds: Record<string, string[]> }>(
+        `/api/bracket-seeds/${tournamentId}`
+      )
+      return res.seeds ?? {}
+    } catch { return {} }
+
+export async function saveBracketSeeds(tournamentId, seeds): Promise<void>
+  → await apiPut(`/api/bracket-seeds/${tournamentId}`, { seeds })
+
+────────────────────────────────────────────────────────────────
+### N. Weigh-In Results
+
+export async function saveWeighInResult(data): Promise<WeighInResult>
+  → return apiPost<WeighInResult>('/api/weigh-in-results', data)
+
+export async function getWeighInResultsByTournamentId(tournamentId): Promise<WeighInResult[]>
+  → return apiGet<WeighInResult[]>(`/api/weigh-in-results?tournamentId=${tournamentId}`)
+
+────────────────────────────────────────────────────────────────
+### O. Sync helpers (convert to no-ops)
+
+getUnsyncedData() and markAllSynced() were for the old sync model where
+data lived locally and needed pushing. Since data now lives on the server
+these functions have no purpose. Convert to no-ops that return empty data:
+
+export async function getUnsyncedData() {
+  return { users: [], registrations: [], assignments: [] };
+}
+export async function markAllSynced(): Promise<void> { }
+
+────────────────────────────────────────────────────────────────
+## Testing Checklist (manual before Playwright)
+
+After the migration, walk through these flows in the running app to
+confirm end-to-end correctness. The server must be running (npm run dev
+in the server/ directory).
+
+  [ ] Register new user → appears in MongoDB
+  [ ] Login with that user
+  [ ] Create a martial art (admin) → appears in GET /api/martial-arts
+  [ ] Create a tournament → appears in GET /api/tournaments
+  [ ] Athlete registers for tournament → appears in GET /api/registrations
+  [ ] Admin records weigh-in → appears in GET /api/weigh-in-results
+  [ ] Admin saves bracket seeds → persists across reload
+  [ ] Admin assigns coach to athlete → appears in GET /api/coach-assignments
+  [ ] Role definition CRUD (admin) → persists
+  [ ] Logout and re-login → session restores correctly from JWT
+
+────────────────────────────────────────────────────────────────
+## Comments
+- database.native.ts (Realm) is NOT changed in this ticket — it is only
+  used for native iOS/Android builds. A separate ticket can migrate it
+  later if needed. For now the web/Expo build uses database.web.ts.
+- The synced field returned by server functions is always set to true.
+  If a caller checks `!item.synced` to queue a sync push, it will now
+  always get false — which is correct since the server is the source of truth.
+- Error propagation: all functions can now throw ApiError. Callers that
+  previously never had errors should be wrapped in try/catch in the UI
+  layer (screens) to show user-friendly messages. This is a follow-up
+  concern; do not add error handling to database.web.ts functions themselves.
+- ThemeContext.tsx uses localStorage.getItem/setItem('kumite-theme')
+  directly — this is UI preference only and should NOT be migrated to
+  the server. Leave it as-is.
+- SyncUpScreen.tsx writes 'kumite_profile' to AsyncStorage — this is an
+  onboarding helper that stands alone. Leave it as-is.
+- After this ticket, the only AsyncStorage keys still in active use are:
+    'session:jwt'       (managed by services/api.ts)
+    'kumite-theme'      (managed by ThemeContext)
+    'kumite_profile'    (managed by SyncUpScreen)
+  All 'db:*' keys become dead storage that can be cleared on next app
+  startup if desired.

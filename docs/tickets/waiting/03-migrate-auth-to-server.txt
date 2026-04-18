@@ -1,0 +1,192 @@
+Priority: 3
+Description: Migrate user registration, login, session persistence, and session restore from local AsyncStorage to the Node.js server. Store a JWT token in AsyncStorage instead of a raw userId.
+Resolved: (no)
+State: (waiting)
+Depends on: 01-server-missing-routes.txt, 02-app-api-client-service.txt
+Criteria of success:
+  - register() calls POST /api/auth/register and stores the returned JWT
+  - login() calls POST /api/auth/login and stores the returned JWT
+  - logout() clears the JWT from AsyncStorage and nulls currentUser in state
+  - On app startup, if a JWT exists, the current user is fetched from GET /api/users/:id
+  - hashPassword and local user-lookup logic are removed from AuthContext
+  - The local 'db:session_user_id' key is no longer written by auth flows
+  - Existing app screens that consume useAuth() continue to work without changes
+  - reloadRoleDefinitions() still works (it calls DB.getAllRoleDefinitions which is migrated in ticket 04)
+Plan generated: (yes)
+Playwright test created: (no)
+Playwright test is passing: (no)
+Unit test created: (no)
+
+────────────────────────────────────────────────────────────────
+## Context
+
+context/AuthContext.tsx currently:
+  - login()    → DB.getUserByEmail() + DB.hashPassword() + local comparison
+  - register() → DB.getUserByEmail() + DB.createUser() + DB.setSession(user.id)
+  - logout()   → DB.clearSession()
+  - startup    → DB.getSessionUserId() → DB.getUserById()
+
+All of this is pure local storage. After this ticket, auth goes through
+the server which uses bcrypt (not the weak local hash). The JWT from the
+server becomes the session token, stored via services/api.ts helpers.
+
+The local DB functions (createUser, getUserByEmail, hashPassword) are NOT
+removed from database.web.ts in this ticket — they will be cleaned up in
+ticket 04. We only change AuthContext here.
+
+────────────────────────────────────────────────────────────────
+## Execution Plan
+
+### A. Understand current AuthContext shape (do not break the interface)
+
+AuthContextType exported fields:
+  currentUser: DB.User | null
+  isLoading: boolean
+  roleDefinitions: DB.RoleDefinition[]
+  reloadRoleDefinitions: () => Promise<void>
+  login: (email, password) => Promise<AuthResult>
+  register: (data: RegisterData) => Promise<AuthResult>
+  logout: () => Promise<void>
+
+DB.User shape (local):
+  { id, email, passwordHash, role, fullName, country, age, gender,
+    academy, weight, beltGrade, createdAt, synced }
+
+Server /api/auth/register + /api/auth/login return:
+  { token: string, user: { _id, email, role, fullName, ... } }
+  (passwordHash excluded, _id normalized to id by services/api.ts)
+
+The User type consumed by the rest of the app only uses:
+  id, email, role, fullName, country, age, gender, academy, weight,
+  beltGrade, createdAt
+It never reads passwordHash or synced from currentUser in practice.
+So the server response maps cleanly to DB.User — just set synced: true
+and passwordHash: '' as filler fields so TypeScript is satisfied.
+
+────────────────────────────────────────────────────────────────
+### B. Rewrite context/AuthContext.tsx
+
+Imports to add:
+  import { storeToken, loadToken, clearToken, apiGet, ApiError } from '../services/api';
+  import { apiPost } from '../services/api';
+
+Remove from imports (no longer needed in AuthContext):
+  DB.hashPassword, DB.getUserByEmail, DB.createUser, DB.setSession,
+  DB.getSessionUserId, DB.clearSession, DB.getUserById
+
+Keep:
+  DB.getAllRoleDefinitions (until ticket 04 — it will transparently call
+  the server once database.web.ts is migrated)
+
+#### register()
+  async function register(data: RegisterData): Promise<AuthResult> {
+    try {
+      const res = await apiPost<{ token: string; user: any }>(
+        '/api/auth/register',
+        {
+          email:      data.email,
+          password:   data.password,   // plain text — server hashes with bcrypt
+          fullName:   data.fullName,
+          role:       data.role,
+          country:    data.country,
+          age:        data.age,
+          gender:     data.gender,
+          academy:    data.academy,
+          weight:     data.weight,
+          beltGrade:  data.beltGrade,
+        },
+      );
+      await storeToken(res.token);
+      setCurrentUser({ ...res.user, passwordHash: '', synced: true });
+      return { success: true };
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 409) return { success: false, error: 'Este correo ya está registrado' };
+        return { success: false, error: err.message };
+      }
+      return { success: false, error: 'Error de conexión con el servidor' };
+    }
+  }
+
+#### login()
+  async function login(email: string, password: string): Promise<AuthResult> {
+    try {
+      const res = await apiPost<{ token: string; user: any }>(
+        '/api/auth/login',
+        { email, password },
+      );
+      await storeToken(res.token);
+      setCurrentUser({ ...res.user, passwordHash: '', synced: true });
+      return { success: true };
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 401) return { success: false, error: 'Credenciales incorrectas' };
+        return { success: false, error: err.message };
+      }
+      return { success: false, error: 'Error de conexión con el servidor' };
+    }
+  }
+
+#### logout()
+  async function logout(): Promise<void> {
+    await clearToken();
+    setCurrentUser(null);
+  }
+
+#### Session restore on startup (useEffect)
+  useEffect(() => {
+    async function restore() {
+      try {
+        const token = await loadToken();
+        if (token) {
+          // Decode userId from JWT payload (middle segment, base64)
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const user = await apiGet<any>(`/api/users/${payload.userId}`);
+          setCurrentUser({ ...user, passwordHash: '', synced: true });
+        }
+      } catch {
+        // Token invalid or server unreachable — stay logged out
+        await clearToken();
+      } finally {
+        await reloadRoleDefinitions();
+        setIsLoading(false);
+      }
+    }
+    restore();
+  }, []);
+
+  Note: atob() is available on Expo web. For native, use:
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
+  Use a try/catch around the decode since an invalid token must not crash.
+
+────────────────────────────────────────────────────────────────
+### C. Leave db/database.web.ts session functions in place
+
+setSession, getSessionUserId, clearSession still exist in database.web.ts
+after this ticket — they just won't be called by AuthContext anymore.
+They will be removed or left dormant when ticket 04 is done.
+
+────────────────────────────────────────────────────────────────
+### D. SyncUpScreen.tsx
+
+SyncUpScreen currently writes to AsyncStorage under 'kumite_profile'
+directly (not through the DB layer). This screen is an onboarding helper
+and does NOT call AuthContext.register(). Leave it unchanged for now — it
+is out of scope and does not affect the auth migration.
+
+────────────────────────────────────────────────────────────────
+## Comments
+- The server uses bcrypt with 12 rounds. The local hashPassword (djb2)
+  will no longer be used for any auth checks. Do NOT delete hashPassword
+  from database.web.ts yet — some screens may reference it via DB.hashPassword;
+  ticket 04 will handle that cleanup.
+- After this ticket, existing users stored ONLY in local AsyncStorage can
+  no longer log in (local DB is bypassed). This is intentional — the server
+  is now the source of truth. Re-registration via the server is required.
+- Error messages are localized in Spanish to match the existing AuthContext
+  error strings ('Este correo ya está registrado', etc.).
+- If the server is unreachable during startup, the app silently logs the
+  user out (clearToken). Consider adding a UI banner for this in the future.
+- The JWT expiry is 7 days (set in server/src/middleware/auth.ts signToken).
+  A 401 during session restore means the token expired — clear it silently.

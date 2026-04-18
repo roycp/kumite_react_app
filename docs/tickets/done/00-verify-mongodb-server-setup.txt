@@ -1,0 +1,203 @@
+Priority: 0
+Description: Ensure MongoDB is installed and running on the developer machine, the Node.js server connects to it successfully on startup, and data written through the REST API is actually persisted in the database across server restarts.
+Resolved: (yes)
+State: (done)
+Depends on: nothing (prerequisite for tickets 01–04)
+Criteria of success:
+  - MongoDB service is running on localhost:27017
+  - server/.env file exists with correct MONGO_URI, PORT, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD
+  - Running 'npm run dev' inside server/ connects to MongoDB without errors
+  - The seeder creates the admin user in MongoDB on first startup (logged to console)
+  - GET /health returns { status: 'ok' }
+  - POST /api/auth/register creates a user document in the kumite.users collection
+  - After restarting the server, POST /api/auth/login with the same credentials succeeds
+    (proves data survived the restart — not just in memory)
+  - The server logs the MongoDB URI on startup (already in server.ts)
+Plan generated: (yes)
+Playwright test created: (yes) — e2e/server-smoke.spec.ts
+Playwright test is passing: (yes) — 9/9 passed
+Unit test created: (no)
+
+────────────────────────────────────────────────────────────────
+## Context
+
+The server (server/src/server.ts) already calls connectDB(MONGO_URI) and
+seedAdmin() on startup. Mongoose models are defined. The code is correct —
+what needs to be verified is the environment setup on the developer's
+Windows machine and that end-to-end data persistence actually works.
+
+server/.env.example contains the right defaults but the actual server/.env
+file must be created before the server will pick up the config.
+
+────────────────────────────────────────────────────────────────
+## Execution Plan
+
+### A. Install & start MongoDB on Windows
+
+1. Download MongoDB Community Server from mongodb.com/try/download/community
+   Choose: Windows, .msi installer, the latest stable release.
+
+2. During install, choose "Install MongoD as a Service" — this makes
+   MongoDB start automatically with Windows and run in the background.
+   Default data directory: C:\Program Files\MongoDB\Server\<version>\data\
+
+3. After install, verify MongoDB is running:
+     Open PowerShell (or cmd) and run:
+       mongosh
+     You should see a > prompt. Type:
+       db.runCommand({ ping: 1 })
+     Expected output: { ok: 1 }
+     Type 'exit' to leave.
+
+   If mongosh is not found, install MongoDB Shell separately from:
+     mongodb.com/try/download/shell
+
+4. If the service is not running, start it manually:
+     net start MongoDB
+   Or via Services (Win+R → services.msc → find MongoDB → Start).
+
+────────────────────────────────────────────────────────────────
+### B. Create server/.env
+
+Copy server/.env.example to server/.env:
+  (In terminal from the project root)
+  cp server/.env.example server/.env
+
+The defaults in .env.example are correct for a local dev machine:
+  PORT=3001
+  MONGO_URI=mongodb://localhost:27017/kumite
+  JWT_SECRET=change_me_in_production
+  ADMIN_EMAIL=admin@kumite.app
+  ADMIN_PASSWORD=Admin@1234
+
+The 'kumite' database will be created automatically by MongoDB the first
+time a document is inserted — you do not need to create it manually.
+
+Make sure server/.env is in .gitignore. Add it if not already there:
+  echo "server/.env" >> .gitignore
+
+────────────────────────────────────────────────────────────────
+### C. Install server dependencies (if not done yet)
+
+  cd server
+  npm install
+
+────────────────────────────────────────────────────────────────
+### D. Start the server and verify MongoDB connection
+
+  cd server
+  npm run dev
+
+Expected console output (in order):
+  Connected to MongoDB: mongodb://localhost:27017/kumite
+  [seed] Admin user created: admin@kumite.app   ← first run only
+  KumiteApp server listening on port 3001
+
+On subsequent starts:
+  [seed] Admin user already exists: admin@kumite.app
+
+If you see a MongoNetworkError or ECONNREFUSED it means MongoDB is not
+running — go back to step A and verify the service is active.
+
+────────────────────────────────────────────────────────────────
+### E. Verify health endpoint
+
+  curl http://localhost:3001/health
+
+Expected response:
+  {"status":"ok","timestamp":"2026-..."}
+
+────────────────────────────────────────────────────────────────
+### F. Verify data persistence end-to-end
+
+This is the key test: write data, restart the server, read it back.
+
+Step 1 — Register a test user (server must be running):
+  curl -X POST http://localhost:3001/api/auth/register \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"test@kumite.app\",\"password\":\"Test@1234\",\"fullName\":\"Test User\",\"role\":\"athlete\"}"
+
+Expected: 201 response with { token: "...", user: { id: "...", email: "test@kumite.app", ... } }
+Save the returned token — you will need it for protected routes.
+
+Step 2 — Stop the server (Ctrl+C in the terminal running npm run dev)
+
+Step 3 — Restart the server:
+  npm run dev
+
+Step 4 — Login with the same credentials:
+  curl -X POST http://localhost:3001/api/auth/login \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"test@kumite.app\",\"password\":\"Test@1234\"}"
+
+Expected: 200 response with a new { token, user }
+If you get 401 "Invalid credentials", data was not persisted (check MONGO_URI).
+
+Step 5 — Verify via MongoDB Shell (optional but definitive):
+  mongosh
+  use kumite
+  db.users.find({}, { passwordHash: 0 })
+  // Should show both admin@kumite.app and test@kumite.app
+
+────────────────────────────────────────────────────────────────
+### G. Add server/.env to .gitignore
+
+Check project root .gitignore and server/.gitignore (if it exists).
+Add 'server/.env' to whichever applies. The .env file must never be
+committed because it contains JWT_SECRET and admin credentials.
+
+────────────────────────────────────────────────────────────────
+### H. Note the server PORT in the app config
+
+The server listens on port 3001 (from .env). Ticket 02 creates
+constants/serverConfig.ts with SERVER_BASE_URL. Make sure it matches:
+
+  export const SERVER_BASE_URL = 'http://localhost:3001';
+                                                    ^^^^
+                                    Must match PORT in server/.env
+
+────────────────────────────────────────────────────────────────
+## Common Failure Modes on Windows
+
+ECONNREFUSED / MongoNetworkError
+  → MongoDB service is not running. Run: net start MongoDB
+
+Authentication failed
+  → MongoDB was installed with auth enabled. Either disable auth for dev
+    (edit mongod.cfg: security.authorization = disabled) or add credentials
+    to MONGO_URI: mongodb://username:password@localhost:27017/kumite
+
+Port 3001 already in use
+  → Another process is on 3001. Change PORT in server/.env to 3002 and
+    update SERVER_BASE_URL in constants/serverConfig.ts to match.
+
+ts-node not found
+  → Run 'npm install' inside the server/ directory.
+
+mongosh not recognized
+  → Install MongoDB Shell separately or use the full path:
+    "C:\Program Files\MongoDB\Server\<version>\bin\mongosh.exe"
+
+────────────────────────────────────────────────────────────────
+## Comments
+- The 'kumite' database and all collections are created automatically on
+  first insert — no manual DB setup needed.
+- The seed (seedAdmin) is idempotent: safe to run on every startup.
+- Do not use 'mongodb://localhost:27017/kumite?authSource=admin' unless
+  you explicitly enabled MongoDB authentication during install.
+- MongoDB was already installed and running on localhost:27017 (PID 4812).
+- server/.env created from .env.example with default values.
+- server/.env added to root .gitignore.
+- Playwright smoke test (e2e/server-smoke.spec.ts) uses Playwright's request
+  fixture to make HTTP calls — no browser needed. Tests health, register,
+  login, duplicate rejection, wrong-password rejection, seeded admin login,
+  and auth-protected GET /api/users. All 9 passed.
+- The _id normalization test (last test) documents the current server shape
+  (returns _id, not id) — ticket 01 will add normalization.
+
+## Review Notes
+- Confirmed MongoDB is running as a Windows service on port 27017.
+- server/.env created and gitignored correctly.
+- All environment setup criteria satisfied.
+- 9/9 Playwright smoke tests pass confirming: server starts, connects to
+  MongoDB, register/login works, auth guards work, seeded admin exists.
